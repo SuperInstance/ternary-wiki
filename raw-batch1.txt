@@ -1,0 +1,2200 @@
+=== ternary-dropout ===
+desc: ternary-dropout - SuperInstance ecosystem crate
+lang: Rust
+# ternary-dropout
+
+**Regularization in {-1, 0, +1} — where zero is a first-class citizen and flipping a trit means something.**
+
+[![crates.io](https://img.shields.io/crates/v/ternary-dropout.svg)](https://crates.io/crates/ternary-dropout)
+[![docs.rs](https://docs.rs/ternary-dropout/badge.svg)](https://docs.rs/ternary-dropout)
+
+## Why This Exists
+
+Dropout prevents neural networks from memorizing training data by randomly silencing activations during training. It's embarrassingly simple: set values to zero with probability p. The network can't rely on any single neuron, so it learns redundant, robust representations.
+
+In float networks, dropout introduces artificial zeros. In ternary networks, zero is already a meaningful value — it represents "neutral" or "no signal." Ternary dropout doesn't introduce a foreign concept; it *amplifies an existing one*. This makes dropout particularly natural in Z₃.
+
+But ternary space also enables something float dropout can't do: **trit flipping.** Instead of silencing a value, you can *change its sign*. Flipping a +1 to -1 isn't just noise — it's adversarial training built into the architecture. This crate provides both.
+
+## The Key Insight
+
+Ternary dropout has three operations that float dropout doesn't:
+
+1. **Zeroing** — natural, because zero is already in the alphabet
+2. **Flipping** — change +1 to -1 or vice versa, a sign-reversal attack
+3. **Voting** — majority pooling after dropout acts as ensemble consensus
+
+These three operations provide a richer regularization landscape than float dropout's single "set to zero" move.
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-dropout = "0.1"
+```
+
+```rust
+use ternary_dropout::*;
+
+let matrix = TernaryMatrix::from_flat(3, 4, vec![
+    Trit::One, Trit::NegOne, Trit::Zero, Trit::One,
+    Trit::Zero, Trit::One, Trit::One, Trit::NegOne,
+    Trit::NegOne, Trit::Zero, Trit::One, Trit::Zero,
+]);
+
+=== ternary-dynamics ===
+desc: Ternary Dynamics  Temporal dynamics of ternary agent systems — how strategies evolve over time,...
+lang: Rust
+# ternary-dynamics
+
+**Dynamic markings for agent resource control.**
+
+In music, dynamics (pp, p, mp, mf, f, ff) tell performers how loud or soft to play.
+Crescendos swell, diminuendos fade, and sforzandos hit suddenly. This crate brings
+those expressive markings to ternary agent systems, mapping abstract dynamic levels to
+concrete resource allocations.
+
+## Overview
+
+When an agent needs computational resources — CPU time, memory, API calls, attention
+budget — the question isn't just *how much* but *how it changes over time*. Musical
+dynamics provide a natural vocabulary for this:
+
+- A **piano** agent uses minimal resources, running quietly in the background
+- A **forte** agent uses significant resources, running prominently
+- A **crescendo** gradually increases resource usage
+- A **sforzando** suddenly spikes, then returns to normal
+
+## Core Components
+
+### DynamicMark
+
+Eight dynamic levels from softest to loudest, each mapped to a resource fraction:
+
+| Mark | Notation | Intensity | Fraction |
+|------|----------|-----------|----------|
+| Ppp  | ppp      | 0.0625    | 6.25%    |
+| Pp   | pp       | 0.125     | 12.5%    |
+| P    | p        | 0.25      | 25%      |
+| Mp   | mp       | 0.375     | 37.5%    |
+| Mf   | mf       | 0.5       | 50%      |
+| F    | f        | 0.75      | 75%      |
+| Ff   | ff       | 0.875     | 87.5%    |
+| Fff  | fff      | 1.0       | 100%     |
+
+Mezzo-forte (mf) is the default — the "normal" operating level at 50% resources.
+
+```rust
+
+=== ternary-ear ===
+desc: ternary-ear  Listening and pattern recognition across a ternary agent fleet
+lang: Rust
+# Ternary Ear
+
+Listening and **pattern recognition across a ternary agent fleet**. Agents perceive each other's {-1, 0, +1} signal streams and learn from them — detecting recurring patterns, measuring frequency distributions, analyzing harmonic relationships, tracking rhythms, and improving recognition accuracy over time.
+
+## Why It Matters
+
+A fleet of ternary agents generates a continuous stream of ternary signals. Without listening infrastructure, each agent is deaf to others' behavior patterns. The Ear provides five layers of perception:
+
+1. **Pattern matching**: Register specific ternary sequences and detect when they recur
+2. **Frequency analysis**: Track the distribution of {-1, 0, +1} values over time
+3. **Harmonic analysis**: Discover inverse, shifted, and correlated signal pairs
+4. **Rhythm detection**: Find periodic patterns using autocorrelation
+5. **Memory**: Store and retrieve recognized patterns with capacity-limited LRU eviction
+
+Together, these transform raw signal streams into actionable fleet intelligence — detecting coordination, spotting anomalies, and predicting future behavior.
+
+## How It Works
+
+### Pattern Detection
+
+The `Ear` maintains a ring buffer of incoming ternary values and a list of watched patterns. On each `listen(value)` call, it checks if the tail of the buffer matches any registered pattern:
+
+$$\text{match}(P, B) \iff B[|B|-|P| \; \ldots \; |B|] = P$$
+
+The `detect_recurring(min_obs)` function scans the entire buffer for all subsequences of length 2 to `max_pattern_len` that appear at least `min_obs` times. This uses a sliding-window enumeration:
+
+$$\text{count}(s, B) = |\{i : B[i \ldots i+|s|] = s\}|$$
+
+### Frequency Analysis
+
+The `FrequencyDetector` maintains counts $[n_{-1}, n_0, n_{+1}]$ and computes:
+
+$$f(v) = \frac{n_v}{n_{-1} + n_0 + n_{+1}}$$
+
+The **dominant** value is $\arg\max_v n_v$. Uniformity is tested: all counts within 10% of $N/3$. Shannon entropy:
+
+$$H = -\sum_v f(v) \log_2 f(v), \quad H_{\max} = \log_2 3 \approx 1.585$$
+
+### Harmonic Analysis
+
+
+=== ternary-ecology ===
+desc: ternary-ecology  Ecological dynamics on ternary populations
+lang: Rust
+# ternary-ecology
+
+**Ecological dynamics where every population is {-1, 0, +1}. Lotka-Volterra predator-prey, food webs, competitive exclusion, and trophic cascades — discretized to ternary states.**
+
+## Why This Exists
+
+Classical ecology uses continuous differential equations: the Lotka-Volterra equations describe how fox and rabbit populations oscillate over time. But real populations aren't continuous — they're discrete, and when you're managing a large ecosystem simulation (or modeling an agent system inspired by ecology), you often don't care about exact population numbers. You care about trends: is this species growing, stable, or declining?
+
+That's exactly three states. +1 for growing, 0 for stable, -1 for declining. The ternary encoding captures the essential dynamics — who eats whom, who's thriving, who's dying — without the overhead of continuous population tracking.
+
+This crate implements ternary ecology: food webs, Lotka-Volterra dynamics, competitive exclusion, mutualism, and trophic cascades. Every population is a single ternary digit. The dynamics are qualitative, not quantitative — and that's the point.
+
+## The Key Insight
+
+In continuous Lotka-Volterra, the equations are:
+
+```
+dx/dt = αx - βxy    (prey grows, gets eaten)
+dy/dt = δxy - γy    (predator grows from eating, dies naturally)
+```
+
+Ternary Lotka-Volterra replaces derivatives with discrete transitions:
+
+```
+prey_new  = clamp(prey + prey_growth - predation × predator, -1, +1)
+pred_new  = clamp(pred + pred × prey - pred_death, -1, +1)
+```
+
+Same structure, but every variable and every result is {-1, 0, +1}. The clamp replaces the continuous dynamics. You lose the beautiful oscillation diagrams (no limit cycles in a three-valued system), but you gain:
+- **Instant computation** — no numerical integration needed
+- **Exact dynamics** — no rounding, no step-size issues
+- **Qualitative correctness** — the trends (who eats whom, who benefits) are preserved
+- **Composability** — ternary populations plug directly into other ternary systems (graphs, networks, topology)
+
+## Quick Start
+
+```rust
+use ternary_ecology::*;
+
+// Build a food web with 3 species
+
+=== ternary-econ ===
+desc: Economic models with ternary market signals
+lang: Rust
+# ternary-econ
+
+Economic models with ternary market signals — portfolio optimization, supply/demand analysis, risk assessment, multi-agent market simulation, and trading strategies, all on {-1, 0, +1}.
+
+## Why This Exists
+
+Financial markets speak in three voices: **bullish**, **neutral**, and **bearish**. Traders reduce continuous price data to these ternary signals because they capture the essential information — direction and conviction — without the noise of precise numbers. This crate builds a complete economic modeling framework on ternary signals: market analysis, supply/demand dynamics, portfolio allocation, risk management, multi-agent simulation, and strategy evaluation.
+
+The ternary constraint {-1, 0, +1} isn't a limitation — it's a discipline. Real traders think in signals, not precise returns. Analysts issue buy/hold/sell recommendations. Economists classify conditions as expansionary/neutral/contractionary. By formalizing this at the type level, the crate prevents the false precision that comes from treating estimated values as exact numbers, and it enables efficient simulation of large-scale agent-based markets.
+
+This crate is part of the **Negative Space Intelligence** ecosystem.
+
+## Core Concepts
+
+- **MarketSignal** — A ternary market direction: `Bearish` (-1), `Neutral` (0), or `Bullish` (+1).
+- **Asset** — A financial asset with name, signal, volatility (0–1), and expected return (-1 to +1).
+- **TernaryMarket** — A collection of assets with aggregate signal (majority voting), average return, and average volatility.
+- **SupplyDemand** — Supply/demand model with ternary indicators. Computes price pressure, updates prices, and measures imbalance.
+- **PortfolioOptimizer** — Allocates portfolio weights based on risk level and asset signals. Three risk profiles: `Avoid`, `Neutral`, `Embrace`.
+- **RiskAssessment** — Evaluates portfolios against risk profiles, returning `Accept`, `Caution`, or `Reject` verdicts.
+- **TernaryAgent** — A trading agent with risk tolerance, cash, holdings, and signal generation. Executes buy/sell/hold based on market signals.
+- **MarketSimulation** — Multi-agent simulation with price discovery driven by aggregate buying/selling pressure.
+- **Strategies** — Built-in `momentum_strategy`, `contrarian_strategy`, and `buy_and_hold_strategy`.
+- **Sharpe Ratio** — Risk-adjusted return metric for simulation results.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-econ = "0.1"
+```
+
+```rust
+use ternary_econ::*;
+
+// Create assets with ternary signals
+let assets = vec![
+    Asset::new("TECH", MarketSignal::Bullish, 0.2, 0.08),
+    Asset::new("BONDS", MarketSignal::Neutral, 0.05, 0.02),
+
+=== ternary-ecosystem ===
+desc: Full ecosystem simulation with multiple ternary species and food webs
+lang: Rust
+# ternary-ecosystem — Full ecosystem simulation with multiple ternary species
+
+Ecosystem struct, species definitions, food webs, niches, carrying capacity, ecological succession tracking, and keystone species detection for ternary agent populations.
+
+## Why This Exists
+
+Individual ternary agents don't exist in isolation — they form populations, compete for resources, and prey on each other. Simulating ecology requires more than just agent-level logic. This crate provides the population-level structures: who eats whom, how many the environment can support, which species are keystone, and how the ecosystem matures over time.
+
+## Core Concepts
+
+- **Balanced ternary** — Values -1, 0, +1. In this crate, a species' strategy trait is ternary: Neg means conservative, Zero means neutral, Pos means aggressive.
+- **Species** — An agent type with population, growth rate, trophic level, and a ternary strategy trait. Species go extinct when population hits zero.
+- **FoodWeb** — A directed graph of predation links (predator → prey, with a rate). Each tick, predators consume prey proportional to predator population and predation rate.
+- **Niche** — An environmental space described by a ternary condition vector (e.g., [hot, dry, bright]). Species' strategy compatibility with niche conditions determines fitness.
+- **CarryingCapacity** — Enforces population limits. Global capacity applies across all species (proportional scaling when exceeded). Per-niche capacity caps species assigned to specific niches.
+- **EcologicalSuccession** — Tracks ecosystem maturity through three stages: Pioneer (low diversity, fast growth), Intermediate, and Climax (high diversity, slow growth). Growth rates adapt to the current stage.
+- **Keystone** — A species whose removal would cause disproportionate biodiversity loss. Detected by analyzing food web connectivity: species with many dependents or wide prey bases.
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-ecosystem = "0.1"
+```
+
+```rust
+use ternary_ecosystem::*;
+
+// Define species
+let species = vec![
+    Species::new("grass",   1000, 10, 0, Ternary::Zero),
+    Species::new("rabbit",   100,  5, 1, Ternary::Pos),
+    Species::new("fox",       20,  3, 2, Ternary::Neg),
+];
+
+// Build food web: rabbit eats grass, fox eats rabbit
+let mut food_web = FoodWeb::new();
+food_web.add_link(1, 0, 30); // rabbit → grass, 3% rate
+food_web.add_link(2, 1, 50); // fox → rabbit, 5% rate
+
+
+=== ternary-em ===
+desc: ternary-em - SuperInstance ecosystem crate
+lang: Rust
+# ternary-em
+
+Expectation-Maximization for ternary latent variables — mixture models where every component is a distribution over {-1, 0, +1}.
+
+## The Problem
+
+You have data that lives in {-1, 0, +1} and you suspect there are hidden clusters driving the pattern. Maybe you're analyzing weight distributions across layers of a ternary neural network. Maybe you're fitting a generative model to quantized sensor readings.
+
+You could hack this: fit a Gaussian mixture model and round the parameters. But that's wrong in specific ways. A Gaussian has infinite support — it assigns probability to values like 0.37 and -2.1 that your data can never take. Its sufficient statistics are mean and variance, not counts. Its log-likelihood landscape is different from a discrete distribution's. And KL divergence between Gaussians doesn't have the clean interpretation it has for ternary distributions.
+
+A ternary distribution is fully specified by three numbers (p₋₁, p₀, p₁) summing to 1. That's it. No covariance matrix, no Cholesky decomposition, no numerical issues with near-singular matrices. The M-step of EM is just weighted counting. The E-step is one division per data point per component. This is as simple as EM gets.
+
+## The Insight
+
+The EM algorithm for ternary mixtures is a counting machine:
+
+1. **E-step**: For each data point xₙ and each component k, compute the posterior responsibility γ(zₙₖ) = πₖ·pₖ(xₙ) / Σⱼ πⱼ·pⱼ(xₙ). This is one multiply and one divide per data-component pair.
+
+2. **M-step**: For each component k, the new weight is πₖ = Nₖ/N (where Nₖ = Σₙ γ(zₙₖ)). The new distribution parameters are pₖ(x) = Σₙ γ(zₙₖ)·𝟙(xₙ = x) / Nₖ. This is just counting how many -1s, 0s, and +1s each component is responsible for, weighted by the responsibilities.
+
+3. **Log-likelihood**: LL = Σₙ ln(Σₖ πₖ·pₖ(xₙ)). Check if |LL_new - LL_old| < tol. If so, you've converged.
+
+No gradients. No learning rates. No optimization landscape. Just counting and dividing. The log-likelihood is guaranteed to be non-decreasing across iterations — this is a fundamental property of EM, not an implementation detail.
+
+## How It Works
+
+### TernaryDistribution
+
+The building block. Three probabilities summing to 1, with auto-normalization on construction. Supports PMF, log-PMF, mean (E[X] = p_pos - p_neg), variance (E[X²] - E[X]²), and deterministic sampling from a uniform random u ∈ [0, 1).
+
+The mean is interesting: it ranges from -1 (all negative) to +1 (all positive), passing through 0 at either uniform or symmetric distributions. This gives you a natural ordering on the component space.
+
+### The EM loop
+
+```
+Initialize: K components with weights πₖ and distributions pₖ(x)
+Repeat:
+    E-step:  γ(zₙₖ) = πₖ · pₖ(xₙ) / Σⱼ πⱼ · pⱼ(xₙ)    [responsibility matrix]
+    M-step:  πₖ = Σₙ γ(zₙₖ) / N                            [mixing weights]
+             pₖ(x) = Σₙ γ(zₙₖ)·𝟙(xₙ=x) / Σₙ γ(zₙₖ)      [ternary counts]
+
+=== ternary-engine ===
+desc: Ternary Engine  Unified simulation engine for ternary {-1,0,+1} agent systems
+lang: Rust
+# ternary-engine
+
+> The unified platform core. What 11 experiments discovered, this crate embodies.
+
+Unified simulation engine for ternary {-1,0,+1} agent systems. This is the platform core for:
+- **CudaClaw**: GPU agent execution engine
+- **AI-Pasture**: Educational game physics  
+- **Living Spreadsheet**: Interactive control surface
+
+---
+
+## Why This Exists
+
+You know how most simulations let you model things in two states: on or off, present or absent, true or false? That works great for light switches. It's terrible for *relationships*.
+
+In a real system — let's say a group of agents cooperating on a task — an agent isn't just "helping" or "not helping." It might be actively blocking. It might be neutral (observing, waiting, resource-constrained). Binary states collapse this nuance. Ternary states preserve it.
+
+**{-1, 0, +1}** captures the full spectrum: adversarial, neutral, cooperative. The engine simulates how these states evolve, how they flip, and what happens when they get stuck. The 0 state is the surprise — it's not nothing, it's a *topological insulator* hiding charge. The engine exists because we needed to know what happens when agents get stuck in 0, and how to tunnel them back out.
+
+This is the core. Everything else (the graphs, the protocols, the 150+ crate ecosystem) builds on top of this.
+
+---
+
+## What We Learned
+
+After 11 experiments with 175+ crates and 3600+ tests:
+
+1. **The 0 state is a topological insulator** — it hides charge, doesn't destroy it
+2. **Tunneling (forgiveness) rescues charge from the 0-trap** — default rate 0.6% _(the value is from sibling experiments; this engine ships it as the default, not as a proven in-engine optimum)_
+3. **|γ| + H is more stable than γ + H** — taking absolute value removes measurement error _(verified in-engine by `test_abs_gamma_plus_h_more_stable`)_
+4. **Pareto selection prevents diversity collapse** — 17/20 vs 1/20 unique genomes _(⚠️ not implemented in this engine; `pareto_enabled` / `pareto_objectives` are config stubs — see Known Limitations)_
+5. **The system is most alive during transitions** — H peaks at tick 100-500, then consensus forms
+6. **Forgiveness rate 0.5-0.7 IS the tunneling rate** — same phenomenon, different language
+
+> **Note on survival mechanics.** Recovery from the 0-trap is _not_ tunneling alone. During normal operation the Moore-neighborhood majority rule and mutation also pull agents back out of the 0 state, so a randomly-initialized grid survives even with modest tunneling. Tunneling is the _unique_ mechanism that can recover a fully-dead (all-0) grid, where every neighbor is 0 and majority rule has nothing to seed a recovery from. This is covered by `test_tunneling_rescues_dead_grid`.
+
+---
+
+## Usage
+
+
+=== ternary-ensemble ===
+desc: ternary-ensemble  Ensemble methods for ternary agents — combine multiple weak agents into a str...
+lang: Rust
+# Ternary Ensemble — Combine Weak Ternary Agents into Strong Predictors
+
+**Ternary Ensemble** provides ensemble methods for agents whose outputs are ternary labels {0, 1, 2} (mapped to {-1, 0, +1}). It implements majority voting, AdaBoost-style boosting, and stacking (meta-learning) — the three foundational ensemble strategies adapted for three-class prediction where the neutral class plays a special role in confidence-weighted decisions.
+
+## Why It Matters
+
+Individual ternary agents are weak learners — each one makes three-way decisions with limited accuracy. But collectively, their errors are largely independent, so combining many weak agents produces a strong predictor. This is the Condorcet Jury Theorem in action: if each agent has accuracy p > ⅓ (better than random for 3 classes), then N agents voting together have accuracy approaching 1 as N grows. The boosting strategy goes further: it trains each subsequent agent to focus on the samples previous agents got wrong, iteratively reducing error. For ternary fleet systems, ensembles provide the reliability that individual GPU agents cannot achieve alone.
+
+## How It Works
+
+### Voting
+
+The `VotingCombiner` supports three strategies ([`VotingStrategy`](src/voting.rs)):
+- **Majority**: Each agent casts one equal vote; the label with the most votes wins.
+- **Weighted**: Each agent's vote is multiplied by a per-agent weight. If the supplied `agent_weights` vector is shorter than the agent list, the missing entries silently fall back to each agent's `accuracy` field.
+- **Ranked**: Each agent assigns Borda-count ranks (0 = best) to all three classes based on its confidence score; the class with the lowest total rank wins.
+
+Tie-breaking is deterministic and uniform across all three strategies: **the lowest class index wins**. So a 1-1-1 tie resolves to 0, a tie between 1 and 2 resolves to 1, etc.
+
+### Boosting
+
+The `BoostingCombiner` implements ternary AdaBoost:
+
+1. Initialize sample weights uniformly: `w_i = 1/K`
+2. For each round `t = 1..T`:
+    1. Compute each agent's weighted error: `ε_a = Σ_i w_i · [agent_a wrong on sample_i]`
+    2. Update each agent's weight: `α_a = ½ · ln((1 - ε_a) / ε_a) · learning_rate`, then `agent_weights[a] += α_a` and renormalize so the weights sum to 1.
+    3. Compute the ensemble's weighted-vote prediction for every sample.
+    4. Update sample weights: multiply by `(1 + learning_rate)` if the ensemble was wrong, or `(1 - learning_rate / 2)` if it was right, then renormalize.
+
+Final prediction: weighted majority vote of all agents using the learned `agent_weights`. Training is `O(T · N · K)` for `T` rounds, `N` agents, `K` samples.
+
+### Stacking
+
+The `StackingCombiner` trains a per-class meta-learner on the outputs of the base agents. For each sample, the meta-features are the base agents' predictions (one-hot encoded); the meta-learner learns a `[n_agents × 3]` weight matrix plus a 3-element bias that maps those one-hots to per-class logits, trained by gradient descent on a hinge-like loss. The predicted class is the argmax of the resulting logits.
+
+If `predict` is called before `fit`, the combiner silently falls back to simple majority voting — the `fitted` field is the explicit indicator of whether the meta-learner has been trained.
+
+### Evaluation
+
+
+=== ternary-ensign ===
+desc: Specialist agent pattern inspired by naval ensigns
+lang: Rust
+# ternary-ensign: Specialist agent pattern with domain registry and bridging
+
+An ensign is a domain specialist that handles tasks within its area of expertise. The registry loads and unloads specialists. The factory creates them on demand. The proxy manages API keys. The bridge maps domains to skills.
+
+## Why This Exists
+
+Not every agent needs to do everything. In a ternary ecosystem, specialists are loaded into rooms based on what the room needs — a navigation room gets a navigation ensign, a comms room gets a comms ensign. This crate formalizes that pattern, inspired by naval ensigns (junior officers with specific duties) and by the git-agent model where each room loads domain-specific skills.
+
+## Core Concepts
+
+- **Ensign (trait)** — A domain specialist. Implement `domain()` to declare your specialty and `handle(task)` to process tasks. Returns an `EnsignResult` (success/fail + output string).
+- **EnsignRegistry** — A HashMap of domain → ensign. Load specialists in, unload them, dispatch tasks to the right domain.
+- **EnsignFactory** — Registers builder functions (`Fn() -> Box<dyn Ensign>`) by domain name. Create ensigns on demand without knowing the concrete type.
+- **EnsignProxy** — Manages API keys and session tokens per domain. Tracks whether a domain is "authenticated" (has both key and session). Does not make network calls.
+- **EnsignBridge** — Maps domain names to skill names (like construct-core skills). Records an invocation log of (domain, task) pairs for auditing.
+- **EchoEnsign / NullEnsign** — Built-in implementations for testing. EchoEnsign prefixes output with its domain; NullEnsign always fails.
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-ensign = "0.1"
+```
+
+```rust
+use ternary_ensign::*;
+
+// Create a registry and load a specialist
+let mut reg = EnsignRegistry::new();
+reg.load(Box::new(EchoEnsign::new("navigation")));
+
+// Dispatch a task
+let result = reg.dispatch("navigation", "plot course to sector 7");
+assert!(result.success);
+assert_eq!(result.output, "[navigation] plot course to sector 7");
+
+// Use the factory for on-demand creation
+let mut factory = EnsignFactory::new();
+factory.register("comms", || Box::new(EchoEnsign::new("comms")));
+let ensign = factory.create("comms").unwrap();
+
+=== ternary-entropy ===
+desc: Entropy analysis for ternary strategy distributions
+lang: Rust
+# ternary-entropy: Information-theoretic measures for three-valued distributions
+
+Shannon entropy, conditional entropy, mutual information, KL divergence, and sliding-window analysis over probability distributions whose outcomes are positive (+1), negative (−1), or neutral (0).
+
+## Why This Exists
+
+When you model decisions as three-valued signals—buy/hold/sell, agree/neutral/disagree, accelerate/coast/brake—you need to answer questions like "how uncertain is this signal?" and "how much does knowing one signal tell me about another?" Standard binary entropy tools don't fit. This crate provides the full information-theory toolkit purpose-built for ternary distributions, including joint distributions, conditional entropy, and sliding-window entropy traces.
+
+## Core Concepts
+
+- **Ternary** — A value that is `Positive` (+1), `Negative` (−1), or `Neutral` (0). Not a boolean; not a float. Three states.
+- **TernaryDistribution** — A probability distribution over the three ternary values. Stores `[P(Positive), P(Negative), P(Neutral)]`. Sum must equal 1.0.
+- **Shannon entropy** — A measure of unpredictability. For a ternary distribution, it ranges from 0 (completely deterministic) to log₂(3) ≈ 1.585 bits (uniform).
+- **JointDistribution** — A 3×3 probability table for pairs of ternary variables. Used to compute how two signals relate.
+- **Conditional entropy H(B|A)** — How uncertain B remains after you know A. If H(B|A) = 0, then A completely determines B.
+- **Mutual information I(A;B)** — How many bits of information A and B share. Zero means they're independent.
+- **KL divergence D_KL(P‖Q)** — How different distribution P is from Q, measured in bits. Not symmetric; P is the "true" distribution, Q is the "model."
+- **Jensen-Shannon divergence** — A symmetric, smoothed version of KL divergence. Always finite. Bounded by 1 bit (log₂ 2); this bound is independent of alphabet size.
+- **Entropy rate** — The per-symbol uncertainty of a sequence, computed from conditional entropy of consecutive pairs.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-entropy = "0.1"
+```
+
+```rust
+use ternary_entropy::*;
+
+// Build a distribution from observed data
+let seq = vec![
+    Ternary::Positive, Ternary::Positive, Ternary::Negative,
+    Ternary::Neutral, Ternary::Positive,
+];
+let dist = TernaryDistribution::from_sequence(&seq);
+
+// How uncertain is this signal?
+let h = shannon_entropy(&dist);
+
+=== ternary-envelope ===
+desc: Envelope/ADSR dynamics for ternary (-1, 0, +1) signals
+lang: Rust
+# ternary-envelope
+
+**Attack/decay/sustain/release of ternary ideas.** ADSR envelope shaping for ternary signals — how ideas enter, peak, hold, and fade in agent populations.
+
+## Why This Exists
+
+Ideas don't arrive at full strength and disappear instantly. An agent's contribution has a shape: it builds up (attack), settles (decay), holds steady (sustain), then fades (release). In synthesizer terms, this is the ADSR envelope.
+
+In `ternary-tenforward`, we observed that agent contributions follow natural envelope patterns:
+
+- **Attack**: An agent's first few contributions ramp up in assertiveness. Energy starts low and builds.
+- **Decay**: After the initial burst, the agent settles to a sustained level. The first impassioned argument gives way to steady advocacy.
+- **Sustain**: The agent maintains a consistent energy level for the middle of their contribution arc.
+- **Release**: As the agent disengages or is superseded, their influence fades gradually.
+
+Without explicit envelope modeling, all agent contributions are treated as rectangular — full on or full off. This creates discontinuities in the population dynamics. ADSR smoothing makes transitions natural and prevents the jarring on/off switches that cause cascade effects.
+
+## The Physics Behind It
+
+### ADSR Envelope Model
+
+The classic ADSR model from analog synthesizers maps perfectly onto ternary agent dynamics:
+
+```
+Level
+1.0 ┤     ╱‾‾‾‾‾‾‾‾‾‾╲
+    │    ╱  sustain     ╲
+    │   ╱ level          ╲
+    │  ╱                   ╲
+    │ ╱                     ╲
+0.0 ├╱                       ╲
+    └──┬──┬───────────────┬──┬──
+       A  D       S       R
+```
+
+- **Attack** (`attack_samples`): Samples to ramp from 0.0 to 1.0. Short attack = agent bursts in. Long attack = agent warms up gradually.
+- **Decay** (`decay_samples`): Samples to ramp from 1.0 to sustain level. After the initial burst, how quickly the agent settles.
+- **Sustain** (`sustain_level`, 0.0-1.0): The steady-state amplitude. How much energy the agent maintains during their main contribution.
+- **Release** (`release_samples`): Samples to ramp from sustain to 0.0. How gradually the agent disengages.
+
+
+=== ternary-epidemic ===
+desc: ternary-epidemic  Epidemic and diffusion dynamics on ternary networks
+lang: Rust
+# Ternary Epidemic — Gossip Protocol with Ternary Infection States
+
+**Ternary Epidemic** implements an epidemic-style gossip protocol for GPU cluster state propagation using ternary infection states: **+1 (Infected)** has the update, **0 (Carrier)** is relaying but hasn't fully applied it, and **-1 (Susceptible)** needs the update. It provides push-pull gossip, convergence detection, and rumor mongering with anti-entropy synchronization.
+
+## Why It Matters
+
+Gossip protocols are the most robust way to propagate state across large distributed systems — they tolerate node failures, network partitions, and message loss with O(log N) convergence time. The ternary infection model adds a crucial intermediate state: carriers relay information while processing it, reducing the window of inconsistency compared to binary SI (Susceptible-Infected) models. For GPU clusters running ternary inference, this means model updates propagate faster and with fewer inconsistency windows. The push-pull mechanism ensures that even nodes behind firewalls (push-only) eventually receive updates through carrier intermediaries.
+
+## How It Works
+
+### Infection States
+
+- **Susceptible (-1)**: Node hasn't received the update; its local state is stale
+- **Carrier (0)**: Node has received the update and is relaying it, but hasn't fully applied/verified it yet
+- **Infected (+1)**: Node has received, verified, and applied the update
+
+State transitions: Susceptible → Carrier → Infected (monotonic progression per update).
+
+### Push-Pull Gossip
+
+Each round, every node contacts a random neighbor:
+- **Push**: If the node has a newer version, it sends the update to the neighbor
+- **Pull**: If the neighbor has a newer version, the node requests it
+
+A node that receives an update transitions Susceptible → Carrier, then Carrier → Infected after applying it.
+
+### Convergence Detection
+
+The protocol tracks the fraction of nodes in each state. Convergence is achieved when >95% of nodes are Infected. Expected convergence time for N nodes with fanout F is:
+
+```
+E[rounds to convergence] ≈ log_{F+1}(N) + 3
+```
+
+For N = 1000 nodes with fanout 3, this is ~7 rounds.
+
+### Rumor Mongering
+
+To reduce message overhead, nodes can switch to rumor mongering after initial push-pull: each infected node contacts a small number of random neighbors per round and stops spreading after K rounds (configurable burnout).
+
+
+=== ternary-epoch ===
+desc: Epoch for ternary {-1, 0, +1} systems — `Epoch`
+lang: Rust
+# Ternary Epoch — Epoch Detection and Transition Analysis for Ternary Time Series
+
+**Ternary Epoch** detects epochs (periods of stable state) in ternary-valued time series, analyzes transitions between epochs, and builds Markov transition matrices. It segments history into runs where a single ternary value {-1, 0, +1} dominates, measures epoch durations, and computes the probability of transitioning between states.
+
+## Why It Matters
+
+Complex systems pass through phases — stable periods punctuated by transitions. Detecting these epochs in ternary time series (agent states, GPU utilization, consensus outcomes) is essential for understanding system dynamics. The transition matrix reveals whether the system is bistable (oscillating between two states), tri-stable (cycling through all three), or monostable (stuck in one state). In fleet management, epoch analysis answers questions like "how often does the fleet enter the neutral (0) state?" and "what's the probability of recovering from a -1 epoch?" — questions that directly inform fleet health assessment.
+
+## How It Works
+
+### Epoch Detection
+
+Scans the history for runs of the same value. A run becomes an epoch if it lasts at least `min_length` ticks:
+
+```
+detect_epochs(history, min_length):
+  for each run of identical values:
+    if run.length >= min_length:
+      emit Epoch { start_tick, dominant_state, stability: 1.0 }
+```
+
+This is a single-pass O(n) algorithm. The `min_length` filter suppresses noise — transient blips that don't represent true state changes.
+
+### Boundary Detection
+
+`epoch_boundary()` returns the indices where the value changes. This is O(n) and useful for identifying exact transition points for further analysis.
+
+### Transition Matrix
+
+From the sequence of epochs, builds a 3×3 Markov chain:
+
+```
+         to -1   to 0   to +1
+from -1 [ p₀₀   p₀₁    p₀₂  ]
+from  0 [ p₁₀   p₁₁    p₁₂  ]
+from +1 [ p₂₀   p₂₁    p₂₂  ]
+```
+
+where pᵢⱼ = count(i→j) / count(i→*). This reveals the system's state dynamics: are transitions balanced (uniform) or biased (e.g., always exit 0 toward +1)?
+
+
+=== ternary-explain ===
+desc: ternary-explain  Explainability for ternary agent decisions — WHY did the agent choose -1, 0, o...
+lang: Rust
+# ternary-explain
+
+**Explainability for ternary agent decisions** — _Why did the agent choose -1, 0, or +1?_
+
+When an AI agent makes ternary decisions (negative/neutral/positive), it's not enough to know _what_ it chose. You need to know _why_. This crate provides a complete explainability framework for tracing, auditing, and understanding ternary decisions.
+
+## Explainability Methodology
+
+### SHAP-Inspired Feature Contributions
+
+Each feature's contribution to the final decision is decomposed into per-action contributions, inspired by [SHAP (SHapley Additive exPlanations)](https://arxiv.org/abs/1705.07874):
+
+- **Per-feature decomposition**: Every input feature gets a contribution score for each of the three actions (-1, 0, +1)
+- **Net push**: The difference between positive and negative contributions indicates overall direction
+- **Magnitude**: The total absolute contribution indicates how influential a feature is
+- **Supporting vs. opposing**: Features are classified by whether they push toward or against the chosen action
+
+### Decision Tracing
+
+Every decision records the complete reasoning chain:
+
+1. **Inputs** → raw feature values entering the decision
+2. **Scores** → numerical scores for each possible action
+3. **Action** → the final chosen action
+4. **Confidence** → how certain the agent was
+5. **Margin** → gap between the winning and second-best score
+
+### Counterfactual Analysis
+
+For any decision, we can answer: _"What would need to change for the agent to choose differently?"_
+
+- Identifies which features would need to change
+- Estimates the required value for each feature
+- Ranks changes by feasibility (smaller relative changes = more feasible)
+
+### Audit Trail
+
+All decisions are logged with timestamps, enabling:
+- Action distribution analysis (is the agent biased?)
+- Close-call detection (decisions with thin margins)
+
+=== ternary-failure ===
+desc: Failure analysis with ternary classification
+lang: Rust
+# ternary-failure
+
+Failure analysis with ternary classification — FMEA risk analysis, fault trees with ternary gates, reliability modeling, MTBF estimation, and ternary confidence bounds.
+
+## Why This Exists
+
+Reliability engineering and failure analysis often categorize risks into three levels: acceptable, needs attention, and must avoid. This crate formalizes that ternary classification into a complete toolkit: FMEA (Failure Mode and Effects Analysis) with Risk Priority Numbers, fault trees with ternary logic gates (AND, OR, NOT, K-of-N), component reliability models with exponential failure rates, and MTBF estimation with ternary confidence bounds (low/medium/high). `forbid(unsafe_code)` throughout.
+
+## Core Concepts
+
+- **FailureMode**: Ternary severity — `Avoid` (must prevent), `Negligible` (tolerable), `Critical` (must address).
+- **Confidence**: Ternary estimate quality — `Low`, `Medium`, `High`, affecting MTBF bounds.
+- **FmeaEntry**: A failure mode with severity, occurrence, and detection ratings (1–10). Risk Priority Number = S × O × D.
+- **FmeaAnalysis**: Aggregate FMEA entries, sort by risk, count by classification, compute average and max RPN.
+- **FaultNode / TernaryGate**: Fault tree with `TernaryAnd` (worst of inputs), `TernaryOr` (any non-negligible), `TernaryNot` (invert Avoid↔Negligible), and `KofN` (at least K active).
+- **ReliabilityModel**: Exponential reliability model `R(t) = e^{-λt}` with MTBF, confidence-adjusted MTBF, and ternary confidence bounds.
+- **System reliability**: `series_reliability` and `parallel_reliability` for composing component models.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-failure = "0.1"
+```
+
+```rust
+use ternary_failure::{
+    FailureMode, FmeaEntry, FmeaAnalysis,
+    FaultNode, TernaryGate,
+    ReliabilityModel, Confidence,
+    series_reliability, system_mtbf_series, classify_mtbf,
+};
+
+fn main() {
+    // FMEA analysis
+    let mut fmea = FmeaAnalysis::new();
+    fmea.add(FmeaEntry::new("motor overheating", 8, 5, 3));  // RPN = 120, Critical
+    fmea.add(FmeaEntry::new("cosmetic scratch",     2, 2, 2));  // RPN = 8,   Negligible
+    fmea.add(FmeaEntry::new("brake failure",       10, 3, 8));  // RPN = 240, Avoid
+
+=== ternary-federated ===
+desc: Federated learning for ternary agents
+lang: Rust
+# ternary-federated
+
+Privacy-preserving federated learning for ternary agents. Multiple populations evolve local ternary strategies {-1, 0, +1} and share only aggregated summaries — never raw data — while tracking a differential-privacy budget across federated rounds.
+
+## Why It Matters
+
+Classical federated learning (McMahan et al., 2017) shares full-precision model weights between nodes, creating large communication overhead and privacy risk. By operating in ternary space (ℤ₃), this crate reduces each parameter to 2 bits — an **8× reduction** over FP32 — while the federated aggregation provably preserves differential privacy.
+
+Key properties:
+- **No raw data leaves any node** — only strategy summaries are exchanged
+- **Ternary compression** — each strategy element is {-1, 0, +1}, transmitted in 2 bits
+- **Aggregation methods** — mean, median, and weighted-mean federation
+- **Privacy budget tracking** — ε-differential privacy accounting across rounds
+- **Fitness evaluation** — strategies compete against a target using normalized match scoring
+
+## How It Works
+
+### Ternary Strategy Space
+
+Each node maintains a population of strategies, where each strategy is a vector in ℤ₃ⁿ:
+
+```
+s = (s₁, s₂, ..., sₙ),  sᵢ ∈ {-1, 0, +1}
+```
+
+The strategy space has cardinality |ℤ₃ⁿ| = 3ⁿ. For n = 100, this is ~5 × 10⁴⁷ possible strategies — astronomically large, but ternary compression makes each one only 200 bits (25 bytes).
+
+### Fitness Function
+
+Fitness measures the fraction of matching positions against a target strategy t:
+
+```
+f(s, t) = (1/n) · Σᵢ 𝟙[sᵢ = tᵢ]
+```
+
+This is the normalized Hamming similarity, bounded in [0, 1]. A score of 1.0 means the strategy perfectly matches the target.
+
+### Federated Aggregation
+
+Let K nodes each hold a local strategy sₖ. The federated round computes a global strategy g:
+
+=== ternary-fib ===
+desc: Fib for ternary systems — `ternary_add`, `fibonacci`, `tribonacci`, `find_period`
+lang: Rust
+# Ternary Fibonacci — Fibonacci Sequences in Z₃ Balanced Ternary Arithmetic
+
+**Ternary Fibonacci** computes Fibonacci and Tribonacci sequences using balanced ternary addition mod 3, where the alphabet {-1, 0, +1} is closed under addition. It also finds sequence periods (Pisano periods for arbitrary moduli) and analyzes the cyclic structure of ternary recurrences.
+
+## Why It Matters
+
+The Fibonacci sequence mod n (the Pisano period) is a classic number-theoretic object with surprising depth. In Z₃ specifically, the period is short and the dynamics are fully characterizable — making ternary Fibonacci a testbed for cyclic phenomena in agent systems. The tribonacci extension adds a third-order recurrence that models rock-paper-scissors cycles directly: three competing strategies that each beat one and lose to one. Understanding these cycles is essential for designing ternary agent systems that don't get stuck in pathological oscillations.
+
+## How It Works
+
+### Ternary Addition
+
+Balanced ternary addition wraps mod 3, mapping back to {-1, 0, +1}:
+
+```
+1 + 1 = 2 mod 3 = -1   (wraps to negative)
+(-1) + (-1) = -2 → 1    (wraps to positive)
+1 + (-1) = 0
+```
+
+This defines addition in Z₃, the cyclic group of order 3. The operation is O(1).
+
+### Fibonacci Sequence
+
+Each term is `ternary_add(prev, curr)`:
+
+```
+F(0) = a, F(1) = b
+F(n) = ternary_add(F(n-2), F(n-1)) mod 3
+```
+
+Computing n terms is O(n). Because Z₃ has only 9 possible (prev, curr) pairs, the sequence is periodic with period ≤ 9.
+
+### Tribonacci Sequence
+
+Three-term recurrence using the same Z₃ addition:
+
+```
+T(n) = ternary_add(ternary_add(T(n-3), T(n-2)), T(n-1))
+```
+
+=== ternary-fire ===
+desc: Fire for ternary systems — `new_grid`, `step`, `count_states`, `burn_rate`
+lang: Rust
+# ternary-fire
+
+Forest fire simulation on ternary grids using the Drossel-Schwabl model. Each cell holds a ternary state: **−1 = burning, 0 = empty, +1 = tree**, enabling compact representation of the three-phase fire dynamics that govern wildfire spread, tree regrowth, and cyclic behavior analysis.
+
+## Why It Matters
+
+Wildfire modeling drives critical decisions in forestry management, climate science, and emergency response. Classical forest fire models (Bak, Chen & Tang, 1992) use at least 2 bits per cell for state encoding. The ternary representation uses a natural 3-state mapping that fits in a signed byte, enabling:
+
+- **3× state density** over separate boolean grids (tree/empty + burning/not-burning)
+- **Compact serialization** — one `i8` per cell, directly serializable
+- **Phase analysis** — built-in tools for detecting periodic behavior (limit cycles) in fire dynamics
+- **Burn-rate tracking** — time-series of the fraction of burning cells, useful for parametric studies
+
+The model exhibits **self-organized criticality** — it naturally evolves toward a critical state where fires of all sizes occur, without any parameter tuning.
+
+## How It Works
+
+### The Drossel-Schwabl Model
+
+The grid evolves according to stochastic cellular automaton rules. At each time step:
+
+1. **Ignition**: A burning cell (−1) becomes empty (0). `s(t+1) = 0`
+2. **Spread**: A tree (+1) with at least one burning neighbor catches fire with probability p. `s(t+1) = −1`
+3. **Growth**: An empty cell (0) grows a tree with probability q. `s(t+1) = +1`
+
+The state transition function is:
+
+```
+s(t+1) = {
+    0                    if s(t) = −1                    (burning → empty)
+    −1                   if s(t) = +1  ∧  ∃ burning neighbor  ∧  ξ < p
+    +1                   if s(t) = 0   ∧  ξ < q           (empty → tree)
+    s(t)                 otherwise                       (no change)
+}
+```
+
+where ξ ~ Uniform(0,1) and p, q are the spread and growth probabilities.
+
+### Critical Behavior
+
+
+=== ternary-forgiveness ===
+desc: Forgiveness for the SuperInstance ternary {-1, 0, +1} ecosystem
+lang: Rust
+# ternary-forgiveness
+
+**Forgiveness for the SuperInstance ternary {-1, 0, +1} ecosystem**
+
+[![ternary](https://img.shields.io/badge/ecosystem-ternary-blue)](https://github.com/orgs/SuperInstance/repositories?q=ternary)
+[![tests](https://img.shields.io/badge/tests-0-green)]()
+
+## Why Ternary?
+
+The balanced ternary system {-1, 0, +1} (also known as Z₃) is the mathematically optimal discrete encoding:
+- **More expressive than binary**: three states capture positive, neutral, and negative
+- **Natural for decisions**: accept/reject/abstain, buy/hold/sell, agree/disagree/neutral
+- **Self-balancing**: the 0 state acts as a universal screen, preventing pathological lock-in
+- **Z₃ cyclic dynamics**: rock-paper-scissors is the only natural coordination mechanism
+
+## Stats
+
+| Metric | Value |
+|--------|-------|
+| Lines of Rust | 0 |
+| Test count | 0 |
+| Public types | 0 |
+| Public functions | 0 |
+
+## Ecosystem
+
+This crate is part of the **[SuperInstance Ternary Fleet](https://github.com/orgs/SuperInstance/repositories?q=ternary)**:
+
+- **[ternary-core](https://github.com/SuperInstance/ternary-core)** — shared traits and Z₃ arithmetic
+- **[ternary-grid](https://github.com/SuperInstance/ternary-grid)** — spatial grid with {-1, 0, +1} cells
+- **[ternary-graph](https://github.com/SuperInstance/ternary-graph)** — ternary-weighted graph algorithms
+- **[ternary-automata](https://github.com/SuperInstance/ternary-automata)** — three-state cellular automata
+- **[ternary-compiler](https://github.com/SuperInstance/ternary-compiler)** — expression compiler and optimizer
+
+200+ crates. 4,300+ tests. One pattern.
+
+## Research Context
+
+The ternary approach connects to several active research areas:
+- **Ternary Neural Networks** (TNNs): weights constrained to {-1, 0, +1} for efficient inference
+
+=== ternary-frontier ===
+desc: Exploration and discovery of unknown state space in balanced ternary {-1, 0, +1} systems
+lang: Rust
+# ternary-frontier: Exploration and discovery of unknown ternary state space
+
+Models how agents explore and push into unknown territory in balanced ternary {-1, 0, +1} systems. The frontier is the boundary between known and unknown — this crate tracks who explores what, how risky it is, and who got there first.
+
+## Why This Exists
+
+In multi-agent ternary systems, agents need to discover new states and capabilities. Without a formal model of exploration, you get chaos: duplicated effort, uncharted dead zones, and no way to reward pioneers. This crate formalizes the frontier — the boundary between known and unknown — so exploration becomes structured, trackable, and incentivized.
+
+## Core Concepts
+
+- **Balanced ternary**: A number system using three values: -1, 0, +1 (called Neg, Zero, Pos). Each ternary coordinate is a cell in a 3×3 grid of possible states.
+- **Frontier**: The set of coordinates adjacent to known territory but not yet explored. These are the "edge" of what you understand.
+- **Explorer**: An agent with limited energy that moves through the state space, making discoveries.
+- **DiscoveryLog**: An append-only record of what was found, by whom, and when.
+- **RiskAssessment**: Evaluates the danger of frontier expansion. More unknown neighbors = higher risk. Positive ternary signals are safer; negative signals are dangerous.
+- **PioneerBonus**: Rewards the first agent to discover a region. Subsequent visitors get no bonus — incentivizing rapid exploration.
+- **TerritoryMap**: Tracks which agent owns which coordinates. Prevents conflicting claims.
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-frontier = "0.1"
+```
+
+```rust
+use ternary_frontier::{Frontier, Explorer, DiscoveryLog, Ternary, Coord, PioneerBonus};
+
+let mut frontier = Frontier::new();
+let mut explorer = Explorer::new("scout-1");
+let mut log = DiscoveryLog::new();
+let mut bonuses = PioneerBonus::new();
+
+// Explore the center of the state space
+let center = Coord::new(Ternary::Zero, Ternary::Zero);
+explorer.move_to(center);
+explorer.discover(Ternary::Pos, &mut log, 0);
+frontier.explore(center);
+bonuses.record(center, &explorer.name);
+
+
+=== ternary-fuse ===
+desc: Operator fusion for ternary networks. Matmul+bias+ReLU in a single pass. No memory round-trips.
+lang: Rust
+# ternary-fuse
+
+**Operator fusion for ternary networks. Matmul → bias → activate in a single memory pass — because the computation is free, only the data movement costs.**
+
+## Why This Exists
+
+Here's the thing about ternary neural networks that most papers gloss over: the individual operations are *embarrassingly* simple. Ternary matmul is XNOR+popcount — no multipliers needed. Ternary bias is integer addition. Ternary activation is `sign()` or a clamp. These aren't the bottleneck.
+
+The bottleneck is memory. Every time you write an intermediate result to DRAM and read it back, you've spent 100-1000× more energy than the computation itself. In float networks, fusion is a nice optimization. In ternary networks, it's the *entire point* — if you're not fusing, you're doing it wrong.
+
+This crate takes the most common ternary operation chains and collapses them into single-pass kernels that never write intermediates.
+
+```
+UNFUSED (3 memory round-trips):
+  DRAM → registers: load weights          [~100 cycles]
+  registers → DRAM: store matmul result   [~100 cycles]
+  DRAM → registers: reload for bias       [~100 cycles]
+  registers → DRAM: store biased result   [~100 cycles]
+  DRAM → registers: reload for activation [~100 cycles]
+  registers → DRAM: store final output    [~100 cycles]
+  
+  Computation: ~10 cycles. Data movement: ~600 cycles.
+
+FUSED (1 memory round-trip):
+  DRAM → registers: load weights
+  registers: matmul → bias → activate     [~10 cycles]
+  registers → DRAM: store final output    [~100 cycles]
+  
+  Computation: ~10 cycles. Data movement: ~200 cycles.
+```
+
+Three passes become one. Not 3× faster — more like 3× less memory traffic, which on real hardware is what actually matters.
+
+## The Key Insight
+
+Fusion rules for ternary operations are *different* from float operations. In float land, you fuse matmul+bias because it saves one allocation. In ternary land, the fusion is *semantically simpler* — the entire chain operates in Z₃ (integers mod 3, mapped to {-1, 0, +1}). There are no numerical precision concerns from fusing. No accumulation errors. The math is exact.
+
+This means we can fuse more aggressively:
+- **Matmul + BiasAdd** → bias gets absorbed into the final accumulation
+- **Matmul + Activation** → sign/clamp happens inside the inner loop
+
+=== ternary-fuzzy ===
+desc: Fuzzy logic with ternary membership
+lang: Rust
+# ternary-fuzzy
+
+Fuzzy logic with ternary membership — fuzzy sets, membership functions, inference rules, and defuzzification using a three-valued membership scale.
+
+## Why This Exists
+
+Classical fuzzy logic uses continuous membership degrees in [0, 1]. This precision comes at a cost: complex defuzzification, floating-point sensitivity, and over-engineering for problems that really just need "low / medium / high" distinctions.
+
+**ternary-fuzzy** replaces the continuous membership function with a three-valued scale: `Low` (-1), `Medium` (0), `High` (+1). This simplifies every part of the fuzzy pipeline — membership evaluation is a threshold, t-norms are min, t-conorms are max, complement is symmetric, and defuzzification is just averaging. The result is a fuzzy system that runs on fixed-point or integer-only hardware, produces interpretable outputs, and still captures the essential "degrees of truth" that binary logic misses.
+
+## Core Concepts
+
+| Type | Meaning |
+|---|---|
+| `TernaryMembership` | Membership degree: `Low` (-1), `Medium` (0), `High` (+1) |
+| `TernaryFuzzySet` | A set mapping elements to ternary membership |
+| `MembershipFunction` | Trait: maps a crisp value to ternary membership |
+| `TriangularTernaryMF` | Triangular shape: Low at edges, High at peak, Medium in between |
+| `StepTernaryMF` | Step thresholds: below → Low, between → Medium, above → High |
+| `FuzzyRule` | IF antecedents THEN consequent, with AND/OR operators |
+| `FuzzyControlSystem` | Complete fuzzy controller: fuzzify → rules → defuzzify |
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-fuzzy = "0.1"
+```
+
+```rust
+use ternary_fuzzy::*;
+use std::collections::HashMap;
+
+fn main() {
+    // Build a fuzzy controller
+    let mut sys = FuzzyControlSystem::new();
+
+    // Define input membership functions
+    sys.add_input("temperature", Box::new(StepTernaryMF::new(30.0, 70.0)));
+
+=== ternary-ga ===
+desc: Genetic algorithm toolkit for ternary genomes ({-1, 0, +1})
+lang: Rust
+# ternary-ga
+
+Genetic algorithm toolkit for ternary genomes — selection, crossover, mutation, and generational tracking optimized for `{-1, 0, +1}` search spaces.
+
+## Why This Exists
+
+Standard genetic algorithm libraries assume real-valued or binary genomes. Ternary search spaces (three values per gene) appear naturally in trinary logic design, quantized neural architecture search, and combinatorial optimization problems. This crate provides a complete GA engine with chromosome operations, multiple selection strategies, and population statistics — all built around the ternary alphabet.
+
+## Core Concepts
+
+- **TernaryChromosome** — A vector of ternary genes with crossover and mutation operations
+- **Selection Methods** — Tournament, roulette (fitness-proportional), and rank-based selection
+- **Crossover** — One-point, two-point, and uniform crossover with configurable rates
+- **Mutation** — Random trit flipping that always changes to a *different* value
+- **TernaryGA** — Full GA engine with generational tracking and population statistics
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-ga = "0.1"
+```
+
+```rust
+use ternary_ga::*;
+
+// Define a fitness function: maximize sum of genes (optimal = all +1)
+let fitness = |c: &TernaryChromosome| -> f64 { c.sum() as f64 };
+
+// Create a random initial population
+let population = TernaryGA::random_population(50, 10, &fitness, 42);
+
+// Set up the GA engine
+let mut ga = TernaryGA::new(
+    population,
+    SelectionMethod::Tournament { size: 3 },
+    0.05,  // mutation rate
+    0.9,   // crossover rate
+    123,   // RNG seed
+
+=== ternary-gate ===
+desc: Gate for ternary systems — `gate`, `sidechain`, `duck`, `hysteresis`
+lang: Rust
+# ternary-gate
+
+Ternary gating for mixture-of-experts (MoE) routing. Each expert receives a ternary decision — **{−1 = block, 0 = skip, +1 = activate}** — enabling sparse activation that reduces both compute and memory by up to 16× compared to dense expert evaluation.
+
+## Why It Matters
+
+Mixture-of-experts models (Shazeer et al., 2017) achieve trillion-parameter scale by activating only a subset of experts per token. Standard MoE uses soft gating (continuous weights), requiring all experts to be loaded into memory even when most are inactive.
+
+Ternary gating transforms this into a **hard decision**:
+
+| Gate | Semantic | Action | Cost |
+|------|----------|--------|------|
+| +1 | Activate | Run full expert forward pass | O(d²) |
+| 0 | Skip | Do nothing, contribute nothing | O(1) |
+| −1 | Block | Explicitly exclude (negative signal) | O(1) |
+
+Only the `+1` experts execute, giving a theoretical speedup of **N/k** where N = total experts and k = activated experts.
+
+## How It Works
+
+### Routing Algorithm
+
+Given an input vector x and N experts with scores s₁, ..., sₙ:
+
+```
+1. Sort experts by score (descending)
+2. Top-k experts with score > 0 → Gate::Activate (+1)
+3. Experts with score < −0.5     → Gate::Block (−1)
+4. All others                     → Gate::Skip (0)
+```
+
+The threshold −0.5 for blocking is configurable and represents a "strong negative signal" — the expert is not just irrelevant but actively harmful for this input.
+
+### Load Balancing
+
+Optimal MoE routing requires uniform expert utilization. The load balance metric is:
+
+```
+L = 1 − Σᵢ |fᵢ − 1/N|
+```
+
+=== ternary-gc ===
+desc: Garbage collection for GPU memory with ternary marking. {+1=reachable, 0=maybe-reachable, -1=unreachable}. Mark-sweep with ternary precision.
+lang: Rust
+# ternary-gc
+
+Garbage collection for GPU memory using ternary mark-sweep. Each object receives a ternary mark — **{+1 = reachable, 0 = maybe-reachable, −1 = unreachable}** — enabling three-tier collection precision instead of the binary reachable/unreachable split used by classical GC.
+
+## Why It Matters
+
+Standard mark-sweep GC (McCarthy, 1960) uses binary marks: an object is either reachable or not. This forces a conservative approach — any object with a *possible* reference must be kept, leading to retention of garbage that *might* be reachable.
+
+Ternary marking adds a **third state** for objects that are transitively reachable but not directly rooted. This distinction enables:
+
+- **Generational priority**: Directly-rooted objects (+1) are more valuable than transitively-reached ones (0)
+- **Incremental reclamation**: Maybe-reachable objects (0) can be demoted and reclaimed under memory pressure before becoming fully unreachable
+- **Reduced pause times**: Three-tier marking allows the sweep phase to be selective — reclaim only −1 objects in fast cycles, include 0 objects in full cycles
+- **GPU memory aware**: Designed for GPU object graphs where allocation/deallocation is expensive (~10–100 μs per cudaFree)
+
+## How It Works
+
+### Ternary Mark Phase
+
+The mark phase performs a BFS from root set R:
+
+```
+1. For each root r ∈ R:       mark(r) ← Reachable (+1)
+2. BFS from R:
+   For each object o reachable from R:
+     If mark(o) == Unreachable (−1):
+       mark(o) ← MaybeReachable (0)
+3. All unvisited objects remain Unreachable (−1)
+```
+
+The key distinction: roots and their direct descendants get +1 (Reachable), while objects discovered through transitive reference chains get 0 (MaybeReachable). This is a **depth-of-reach** signal.
+
+### Sweep Phase
+
+Objects marked −1 (Unreachable) are freed:
+
+```
+For each object o where mark(o) == −1:
+    deallocate(o)
+    freed_bytes += size(o)
+
+=== ternary-genome ===
+desc: Genetic encoding and expression for evolving ternary agent populations
+lang: Rust
+# ternary-genome — Genetic encoding and expression for evolving ternary agent populations
+
+Genome, chromosome, gene, mutation rate, crossover, and gene expression structures for ternary-valued genetic algorithms. Every allele is a balanced ternary value.
+
+## Why This Exists
+
+Ternary agent populations need to evolve. Standard binary genetic algorithms lose the "neutral" state that's central to ternary logic. This crate provides genetic structures where every gene carries {-1, 0, +1} alleles — enabling agents to encode "don't care" as a first-class genetic state, not just a coin flip between two extremes.
+
+## Core Concepts
+
+- **Balanced ternary** — Three values: Neg (-1), Zero (0), Pos (+1). Zero means "neutral" or "no preference" — a real genetic state, not an absence of information.
+- **Gene** — One trait with a ternary allele and a dominance score. Higher dominance wins during expression when two parents contribute different alleles.
+- **Chromosome** — A named cluster of genes. Supports mutation at a configurable rate (per-thousand per gene).
+- **Genome** — The full genetic code: a collection of chromosomes. Provides flat allele access and a simple fitness metric (sum of allele values).
+- **MutationRate** — Adaptive mutation rate that increases when fitness stagnates and decreases when fitness improves. Clamped between configurable min/max bounds.
+- **GeneExpression** — Converts genotype to phenotype. Supports single-chromosome expression, full-genome expression, and parent-combined expression where dominance determines which allele wins.
+- **Crossover** — Sexual reproduction: single-point crossover (split at a point, swap tails) and uniform crossover (each gene randomly from one parent).
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-genome = "0.1"
+```
+
+```rust
+use ternary_genome::*;
+
+// Build a genome with two chromosomes
+let genome = Genome::new(vec![
+    Chromosome::new("movement", vec![
+        Gene::new("speed", Ternary::Pos, 3),
+        Gene::new("caution", Ternary::Neg, 1),
+    ]),
+    Chromosome::new("perception", vec![
+        Gene::new("range", Ternary::Pos, 2),
+        Gene::new("focus", Ternary::Zero, 1),
+    ]),
+]);
+
+
+=== ternary-grad ===
+desc: Ternary gradient descent: straight-through estimator, ternary Adam/SGD optimizers, gradient clipping in trit space, cosine LR scheduling
+lang: Rust
+# ternary-grad
+
+**Ternary gradient descent: the training infrastructure that makes {-1, 0, +1} neural networks learnable.**
+
+You can't backpropagate through `sign(x)` — the gradient is zero almost everywhere (and undefined at 0). The **Straight-Through Estimator** (STE, Bengio et al., 2013) solves this: during the forward pass, quantize latent weights to {-1, 0, +1}. During the backward pass, pretend the quantization didn't happen and pass the gradient through unchanged.
+
+This crate provides STE plus ternary-aware optimizers (SGD, Adam), gradient clipping, learning rate schedules, quantization diagnostics, and weight decay — everything you need to train a ternary neural network from scratch.
+
+---
+
+## Motivation
+
+### Why Ternary Weights?
+
+Neural network weights are typically 32-bit floats. For inference at scale, this is expensive:
+- **Memory**: 32× more parameters per byte than 1-bit weights
+- **Bandwidth**: moving weights dominates energy in transformer inference
+- **Multiplication**: ternary weights reduce multiply-accumulate to simple addition/subtraction (or no-op for 0)
+
+Ternary {-1, 0, +1} offers a compelling middle ground:
+- **vs binary** {-1, +1}: the 0 state adds expressivity and natural sparsity
+- **vs full precision**: ~16× memory reduction, hardware-friendly ops
+- **vs pruning**: ternary quantization is deterministic and structured
+
+Research demonstrates ternary networks achieve within 1–3% accuracy of full-precision on ImageNet and language tasks (Li et al., 2016; Zhu et al., 2017; Ma et al., 2024 — BitNet 1.58-bit).
+
+### The Training Problem
+
+The quantization function is:
+
+```
+q(w) =  1   if w > threshold
+        0   if |w| ≤ threshold
+       -1   if w < -threshold
+```
+
+The derivative `dq/dw` is zero everywhere (and undefined at the thresholds). Standard backpropagation gets no signal.
+
+**The Straight-Through Estimator (STE)** is the key trick: define a "fake" gradient for backprop:
+
+
+=== ternary-gradient ===
+desc: Gradient-free and gradient-like optimization for ternary landscapes
+lang: Rust
+# ternary-gradient
+
+Gradient-free and gradient-like optimization on ternary landscapes — coordinate descent, genetic algorithms, simulated annealing, and hill climbing over {-1, 0, +1} spaces.
+
+## Why This Exists
+
+Most optimization tooling assumes continuous, differentiable landscapes. But when your decision variables are inherently ternary — approve/abstain/reject, positive/neutral/negative, on/off/standby — you need optimizers that work natively in discrete three-valued space. This crate provides a suite of classic optimization algorithms that operate directly on ternary vectors, plus a `FitnessLandscape` type for exhaustive enumeration and analysis. `forbid(unsafe_code)` throughout.
+
+## Core Concepts
+
+- **TernaryPoint**: A point in ternary space — a vector of `Ternary` values with neighbor enumeration and Hamming distance.
+- **CoordinateDescent**: Iteratively optimize each coordinate independently; converges to local optima.
+- **GeneticOptimizer**: Population-based search with tournament selection, uniform crossover, and mutation on ternary genes.
+- **SimulatedAnnealing**: Probabilistic neighbor exploration with temperature decay — escapes local optima.
+- **HillClimbing**: Steepest-ascent hill climbing over the neighbor graph.
+- **FitnessLandscape**: Exhaustive evaluation of all `3ⁿ` points for small dimensions; global optimum finding, local optima counting, steepest-ascent traversal.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-gradient = "0.1"
+```
+
+```rust
+use ternary_gradient::{
+    Ternary, TernaryPoint, CoordinateDescent, HillClimbing,
+    SimulatedAnnealing, GeneticOptimizer, FitnessLandscape,
+};
+
+fn count_pos(p: &TernaryPoint) -> f64 {
+    p.coords().iter().filter(|&&v| v == Ternary::Pos).count() as f64
+}
+
+fn main() {
+    let start = TernaryPoint::from_i8_slice(&[0, 0, 0, 0]).unwrap();
+
+    // Coordinate descent
+    let cd = CoordinateDescent::new(4, 100);
+
+=== ternary-grain ===
+desc: Granular synthesis for ternary (-1, 0, +1) streams
+lang: Rust
+# ternary-grain
+
+**Granular synthesis of ternary streams.** Fragment, window, scatter, and recombine short slices of agent state sequences.
+
+## Why This Exists
+
+Granular synthesis revolutionized audio by decomposing sound into tiny overlapping fragments (grains) and recombining them in new ways. Instead of processing a continuous signal, you chop it into pieces, shape each piece with a window function, and layer them to create textures that were impossible with traditional synthesis.
+
+The same principle applies to ternary agent streams. A long conversation trajectory contains patterns at multiple timescales. By slicing it into grains — short windows of ternary data — you can:
+
+- **Scatter** grains across new positions to create variations on the original conversation
+- **Stretch** conversations to arbitrary lengths without changing their character
+- **Freeze** a moment and loop it indefinitely (the "stuck record" of a repetitive argument)
+- **Morph** between two different conversation trajectories
+
+This is the textural layer of the DJ metaphor. Where `ternary-crossfader` handles smooth transitions and `ternary-envelope` shapes dynamics, `ternary-grain` manipulates the raw fabric of the signal itself.
+
+## The Physics Behind It
+
+### Grains and Windowing
+
+A grain is a short fragment of ternary data with a window function applied. The Hann window is used:
+
+```
+w(n) = 0.5 × (1 - cos(2πn/N))
+```
+
+This tapers the grain's edges to zero, preventing discontinuities when grains overlap. Without windowing, overlapping grains create clicks (in audio) or jarring state jumps (in agent dynamics).
+
+The window has a specific property: when two Hann-windowed grains overlap at 50%, their sum is constant. This is the foundation of overlap-add synthesis and guarantees that time-stretching and pitch-shifting don't introduce artifacts.
+
+### Grain Clouds
+
+A `GrainCloud` is a collection of grains with shared parameters:
+
+- **Density** — how many grains per unit length. High density = thick, lush texture. Low density = sparse, pointillistic.
+- **Spread** — randomization of grain positions. Zero spread = all grains start at exactly the same source position. High spread = grains come from all over the source, creating a smeared, averaged version.
+
+`from_source` creates a cloud by randomly sampling positions from the source signal, extracting grain-sized fragments, and optionally spreading them across the output range.
+
+
+=== ternary-graph ===
+desc: ternary-graph  Graph algorithms operating on ternary-weighted edges (`-1`, `0`, `+1`)
+lang: Rust
+# ternary-graph
+
+Graph algorithms operating on ternary-weighted edges {-1, 0, +1}. Provides adjacency matrices, shortest paths with signed weights, graph Laplacian computation, community detection via modularity optimization, and spectral clustering — all in the ternary weight domain.
+
+## Why It Matters
+
+Graph algorithms typically assume non-negative edge weights (Dijkstra requires it). Real-world graphs often have **signed relationships**: trust/distrust networks (Leskovec et al., 2010), excitatory/inhibitory neural connections, and ternary-weighted neural networks where weights are quantized to {-1, 0, +1}.
+
+This crate provides:
+
+- **Ternary adjacency matrices** — O(1) edge lookup with 2-bit storage per edge
+- **Graph Laplacian** — L = D − A, the foundation of spectral clustering
+- **Normalized Laplacian** — L_norm = D^(−1/2) L D^(−1/2), used in normalized spectral clustering (Ng, Jordan & Weiss, 2001)
+- **Community detection** via modularity maximization
+- **Spectral clustering** using Laplacian eigenvectors
+
+## How It Works
+
+### Ternary Edge Weights
+
+Each edge has weight w ∈ {-1, 0, +1}:
+
+| Weight | Semantic | Meaning |
+|--------|----------|---------|
+| +1 | Positive edge | Excitatory / trust / similarity |
+| 0 | No edge | Disconnected |
+| −1 | Negative edge | Inhibitory / distrust / dissimilarity |
+
+The adjacency matrix A is a ternary matrix: A[i][j] ∈ {-1, 0, +1}. Zero means no edge exists, not a "zero-weight edge."
+
+### Graph Laplacian
+
+The combinatorial Laplacian is:
+
+```
+L = D − A
+```
+
+where D is the degree matrix (diagonal, D_ii = degree(i)) and A is the adjacency matrix.
+
+
+=== ternary-haar ===
+desc: Haar wavelet transform for ternary-valued signals
+lang: Rust
+# ternary-haar
+
+Haar wavelet transform for ternary-valued signals {-1, 0, +1}.
+
+[![crates.io](https://img.shields.io/crates/v/ternary-haar.svg)](https://crates.io/crates/ternary-haar)
+
+## Overview
+
+The Haar wavelet is the simplest possible wavelet — a step function that decomposes
+signals into approximation (low-frequency) and detail (high-frequency) components
+at multiple resolution levels. It is ideally suited for ternary signals because
+piecewise-constant signals over {-1, 0, +1} produce sparse wavelet representations.
+
+This crate provides:
+
+- **Haar wavelet decomposition** — Multi-resolution analysis with O(N log N) complexity
+- **Perfect reconstruction** — Inverse transform recovers the original signal exactly
+- **Wavelet coefficients** — Flat coefficient vector in standard ordering
+- **Coefficient thresholding** — Lossy compression by discarding small coefficients
+- **Compression metrics** — Compression ratio, reconstruction error (MSE), energy preservation
+- **Sparsity analysis** — Count zero/near-zero coefficients for compression planning
+
+## Installation
+
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ternary-haar = "0.1.0"
+```
+
+## Quick Start
+
+```rust
+use ternary_haar::*;
+
+// Ternary signal (length must be a power of 2)
+let signal = vec![1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0];
+
+// Full multi-resolution decomposition
+
+=== ternary-harbor ===
+desc: Harbor pattern for agent docking and resource management
+lang: Rust
+# Ternary Harbor — Agent Docking and Resource Management for Ternary Fleets
+
+**Ternary Harbor** implements the harbor pattern for agent lifecycle management: agents arrive at rooms, get assigned berths (docks), receive guidance from pilots (local helpers), are rebalanced by tugs, and are protected by breakwaters (failure isolation). Each agent's priority is classified ternarily as `{-1 (reject/deprioritized), 0 (neutral), +1 (priority)}`, enabling three-tier scheduling.
+
+## Why It Matters
+
+Fleet resource management is fundamentally a scheduling problem: agents arrive, need compute resources, must be isolated from failures, and eventually depart. The harbor metaphor captures all these concerns naturally: berths have capacity limits, pilots guide agents into berths, tugs handle load balancing and berth-to-berth transfers, and breakwaters model which agents are sheltered versus evicted when a failure ("storm") arrives. The ternary priority system adds nuance missing from binary priority: positive-priority agents jump the queue, neutral agents queue normally, and negative agents queue normally as well — only `Positive` is fast-tracked.
+
+## How It Works
+
+### Berth Management
+
+Each `Dock` (berth) is in one of four states: `Empty`, `Occupied(agent)`, `Reserved(agent)`, or `Maintenance`. Berths also track a `current_load` against a fixed `capacity`. Docking an agent:
+
+1. Find an empty dock with sufficient remaining capacity.
+2. Transition status: `Empty -> Occupied` (or `Empty -> Reserved -> Occupied` if pre-reserved for that agent).
+
+Undocking transitions `Occupied -> Empty` and resets the berth's load to zero. (A berth only enters `Maintenance` via an explicit `start_maintenance()` call on an empty berth; it is **not** automatic on undock.)
+
+### Pilot Service
+
+A `Pilot` is a local helper that guides incoming agents into the first available berth (`guide_in`) and guides them back out of a specific berth (`guide_out`). A pilot is a single coordinator object, not a pool, so "pilot assignment" is a constant-time operation; the only linear cost is the berth scan.
+
+### HarborMaster (Queued Scheduling)
+
+The `HarborMaster` owns a queue of `DockingRequest`s. `request_docking` tries to dock immediately; if no berth with sufficient capacity is free, the request is enqueued. `Positive`-priority requests are pushed to the **front** of the queue; `Neutral` and `Negative` requests are pushed to the back. `process_queue` drains the queue, docking as many waiting agents as berths allow.
+
+### Tug (Load Balancing & Transfers)
+
+A `Tug` transfers load between two docks (`transfer_load`) and moves an agent from one berth to another (`assist_move`). Moves are atomic with respect to failure: if the destination cannot accept the agent, the source berth is left untouched, so an agent can never be stranded "homeless" by a failed transfer.
+
+### Breakwater (Failure Isolation)
+
+A `Breakwater` tracks the set of agents registered for protection, up to a fixed `capacity`. When `signal_storm(docked_agents)` is called, it partitions the docked agents: those **both registered and docked** are `sheltered` (up to capacity); all other docked agents are `evicted`. The returned `StormReport` enumerates both groups. (`register` already enforces the capacity bound, so every registered-and-docked agent is sheltered.) `calm()` clears the storm flag.
+
+### Ternary Priority
+
+Agent priority affects queue ordering in `HarborMaster`:
+
+- **`Positive` (+1)**: pushed to the front of the queue — served before neutral/negative agents.
+
+=== ternary-harmonic ===
+desc: ternary-harmonic Harmonic series and overtones for ternary signals
+lang: Rust
+# ternary-harmonic
+
+**The overtone series, made from three values. Where physics meets Z₃.**
+
+Play any note on any instrument and you don't hear one frequency — you hear a whole family of them. The fundamental, then 2x, 3x, 4x, 5x... the harmonic series. It's not a musical convention. It's physics. A vibrating string naturally produces all these frequencies simultaneously, and their relative amplitudes determine the *timbre* — the thing that makes a violin sound different from a flute playing the same note.
+
+This crate maps the harmonic series into ternary space. Given a fundamental frequency, it generates overtones at integer multiples, each with configurable amplitude. The result is a rich, multi-layered ternary signal that carries the physics of real sound inside the {-1, 0, +1} constraint.
+
+## What's Inside
+
+- **`fundamental(freq, ticks)`** — the base tone. Same as `ternary_wave::square` but named for clarity
+- **`overtone_series(freq, ticks, harmonics)`** — generate N harmonics. Each is a ternary wave at freq×n, with amplitude 1/n
+- **`chord(frequencies, ticks)`** — play multiple frequencies simultaneously. Ternary addition (mod 3)
+- **`interval(a, b, ticks)`** — two frequencies. The simplest chord. The relationship between them IS the music
+- **`power_spectrum(signal)`** — compute the frequency content of a ternary signal. What frequencies are present?
+- **`harmonic_ratio(signal)`** — how harmonic is the signal? Pure tones score high. Noise scores low
+- **`dissonance(signals)`** — measure the sensory dissonance between multiple ternary signals
+
+## Quick Example
+
+```rust
+use ternary_harmonic::*;
+
+// A single fundamental at frequency 2
+let fundamental = fundamental(2, 16);
+
+// Add 4 overtones: 2f, 3f, 4f, 5f
+let rich = overtone_series(2, 16, 4);
+// A thicker, more complex sound than the fundamental alone
+
+// A perfect fifth: frequencies 4 and 6 (ratio 3:2)
+let fifth = interval(4, 6, 16);
+
+// A major triad: 4, 5, 6 (ratio 4:5:6)
+let major = chord(&[4, 5, 6], 16);
+
+// Analyze: what's in this signal?
+let spectrum = power_spectrum(&rich);
+// Peaks at the fundamental and its multiples
+
+
+=== ternary-helm ===
+desc: ternary-helm: Steering and control for fleet navigation
+lang: Rust
+# ternary-helm: Steering and control for fleet navigation
+
+`Helm`, `Rudder`, `Tiller`, `Autopilot`, `HelmOrder`, and `HelmLog` — everything a room needs to pick a direction and stay on it in a ternary fleet topology.
+
+## Why This Exists
+
+In a fleet of rooms connected by ternary links (`-1`, `0`, `+1`), rooms need to move through the topology with intention. A room that drifts randomly is useless; a room that steers deliberately can reposition to fill gaps, avoid congestion, or chase objectives. This crate maps the familiar mechanics of ship steering — helm, rudder, tiller, autopilot — onto how rooms navigate a fleet.
+
+## Core Concepts
+
+- **Helm** — The top-level steering controller for a room. Owns the rudder, tiller, autopilot, and action log.
+- **Rudder** — Directional control surface. Deflects to `-1` (port), `0` (amidships), or `+1` (starboard).
+- **Tiller** — Manual override. When engaged, the autopilot disengages and the human (or agent) steers directly.
+- **Autopilot** — Automated course keeping. Computes the correction needed to return to a target heading.
+- **HelmOrder** — A command to change course, with a reason and timestamp. Applied through the helm.
+- **HelmLog** — Append-only record of all helm actions for auditing and replay.
+- **Heading** — Ternary direction: `Port` (-1), `Amidships` (0), `Starboard` (+1).
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-helm = "0.1"
+```
+
+```rust
+use ternary_helm::{Helm, HelmOrder, Heading};
+
+let mut helm = Helm::new(Heading::Amidships);
+
+// Issue an order to turn starboard
+let order = HelmOrder::new(Heading::Starboard, "avoid congestion");
+helm.apply_order(&order);
+assert_eq!(helm.heading(), Heading::Starboard);
+
+// Manual override with the tiller
+helm.grab_tiller(Heading::Port);
+assert!(helm.tiller().is_engaged());
+assert!(!helm.autopilot().is_active());
+
+
+=== ternary-hmm ===
+desc: Hidden Markov Models with Ternary States and Emissions
+lang: Rust
+# ternary-hmm
+
+Hidden Markov Models with ternary states and emissions {-1, 0, +1} — forward-backward algorithms, Viterbi decoding, Baum-Welch training, filtering and smoothing.
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+---
+
+## Why this exists
+
+Hidden Markov Models model sequential data where the true state is hidden and you only observe noisy emissions. Classic HMMs use arbitrary discrete symbols or continuous Gaussians. When your underlying system naturally produces ternary signals — market sentiment (bear/neutral/bull), quantized neural activations (−1/0/+1), ternary processor states — a ternary HMM captures the structure directly without any encoding overhead.
+
+The ternary constraint is more than a convenience: with exactly 3 states and 3 emissions, all the HMM matrices are 3×3. That's 9 transition probabilities, 9 emission probabilities, and 3 initial probabilities — 21 parameters total. You can train a usable model from surprisingly few observations.
+
+## The key insight
+
+An HMM over ternary symbols has a natural symmetry: state −1 should emit −1, state 0 should emit 0, state +1 should emit +1. The emission matrix B is approximately diagonal when the model is well-specified. This means you can initialize Baum-Welch with a nearly-diagonal B and converge in fewer iterations — a trick that doesn't generalize to larger symbol alphabets.
+
+## Quick Start
+
+```rust
+use ternary_hmm::TernaryHMM;
+use ternary_hmm::Ternary::{Negative, Neutral, Positive};
+
+// Define the model: states {-1, 0, +1}, emissions {-1, 0, +1}
+let pi = [0.2, 0.5, 0.3]; // initial state distribution
+let a = [
+    // transition matrix
+    [0.7, 0.2, 0.1], // from -1: likely to stay -1
+    [0.1, 0.8, 0.1], // from  0: very sticky
+    [0.1, 0.2, 0.7], // from +1: likely to stay +1
+];
+let b = [
+    // emission matrix
+    [0.8, 0.1, 0.1], // state -1 -> emits -1 mostly
+    [0.1, 0.8, 0.1], // state  0 -> emits  0 mostly
+    [0.1, 0.1, 0.8], // state +1 -> emits +1 mostly
+];
+let hmm = TernaryHMM::with_params(pi, a, b).unwrap();
+
+
+=== ternary-inference ===
+desc: ternary-inference  Inference from ternary negative spaces — deducing knowledge from what agents...
+lang: Rust
+# ternary-inference
+
+Inference from **ternary negative spaces** — deducing knowledge from what agents avoid. Each position in a decision space holds a ternary value: **avoided (−1), unknown (0), or chosen (+1)**. By analyzing the geometry and topology of avoidance regions, we can infer properties of unexplored regions.
+
+## Why It Matters
+
+Classical inference focuses on what is observed — positive evidence. But in many real-world scenarios, **what an agent avoids is as informative as what it chooses**:
+
+- **Recommendation systems**: A user who never clicks on horror movies reveals a genre preference. This "negative preference" signal is often stronger than positive clicks.
+- **Robotics**: A robot path planner that avoids certain regions reveals information about obstacles it hasn't directly sensed — the avoidance pattern traces the obstacle boundary.
+- **Security**: An attacker who probes some ports but not others reveals their knowledge of the system.
+- **Game AI**: An opponent who never moves to certain positions reveals their strategy's assumptions.
+
+This crate provides the mathematical framework for **negative-space reasoning**: identifying contiguous avoidance regions, measuring their boundary complexity, and inferring properties of the unknown gaps between them.
+
+## How It Works
+
+### Ternary Decision Space
+
+The universe is a vector of ternary values:
+
+```
+X = (x₁, x₂, ..., xₙ),  xᵢ ∈ {−1 (avoided), 0 (unknown), +1 (chosen)}
+```
+
+The three populations partition the space:
+- **A = {i : xᵢ = −1}** — the avoidance set (what we know is "no")
+- **C = {i : xᵢ = +1}** — the choice set (what we know is "yes")
+- **U = {i : xᵢ = 0}** — the unknown set (what we haven't explored)
+
+### Contiguous Avoidance Regions
+
+A contiguous avoidance region (CAR) is a maximal run of consecutive avoided positions:
+
+```
+CAR(X, i, j) ⟺ ∀k ∈ [i,j]: xₖ = −1  ∧  (xᵢ₋₁ ≠ −1 ∨ i = 0)  ∧  (xⱼ₊₁ ≠ −1 ∨ j = n−1)
+```
+
+The crate identifies all CARs in O(n) time using a single scan.
+
+
+=== ternary-interpreter ===
+desc: Ternary bytecode interpreter for GPU control flow. Balanced ternary VM with {-1,0,+1} ops, conditional branching, stack operations.
+lang: Rust
+# ternary-interpreter
+
+**A stack-based bytecode VM where every value is {-1, 0, +1}. Built for GPU control flow, useful for thinking about ternary computation.**
+
+## Why This Exists
+
+Most bytecode VMs operate on integers or floats — rich number systems with无穷 possible values. This one operates on exactly three: negative, zero, positive. That constraint sounds limiting. It's actually clarifying.
+
+When you restrict a VM to ternary values, something interesting happens: every operation has a crisp semantic meaning. `Add` isn't "arbitrary integer addition" — it's Z₃ group addition, which wraps around. `Mul` isn't "arbitrary multiplication" — it's sign multiplication, the simplest non-trivial binary operation. `JumpIf` doesn't branch on "truthy vs falsy" — it branches on *positive* specifically, with `JumpIfNeg` handling the negative case. Zero is genuinely neutral: it doesn't trigger either branch.
+
+This maps directly to how GPU warp voting works. A warp ballot returns three meaningful states per lane: yes, no, abstain. Control flow decisions on GPUs are already ternary — this VM just makes it explicit.
+
+## The Key Insight
+
+Traditional VMs encode decisions as `if (value != 0)`. Ternary VMs encode decisions as *which* non-zero value. The difference matters:
+
+```
+Binary branching:   value != 0 → true    (2 outcomes, 1 meaningful)
+Ternary branching:  value > 0  → yes     (3 outcomes, 3 meaningful)
+                    value < 0  → no
+                    value == 0 → neither
+```
+
+This three-way branching is why `JumpIf` and `JumpIfNeg` are separate instructions. Zero doesn't jump. It's the "keep going" signal. For consensus protocols — which is what GPU warp voting actually is — this is exactly what you need.
+
+## Quick Start
+
+```rust
+use ternary_interpreter::{TernaryVM, Op};
+
+// Simple computation: 1 × 1 + (-1) = 0
+let mut vm = TernaryVM::new(16); // 16-cell store
+
+let result = vm.execute(&[
+    Op::Push(1),     // stack: [1]
+    Op::Push(1),     // stack: [1, 1]
+    Op::Mul,         // stack: [1]   (1 × 1 = 1)
+    Op::Push(-1),    // stack: [1, -1]
+    Op::Add,         // stack: [0]   (1 + (-1) = 0 in Z₃)
+    Op::Halt,
+
+=== ternary-irradiate ===
+desc: Ternary irradiation: radiation damage, cascade simulation, annealing, defect tracking
+lang: Rust
+# ternary-irradiate
+
+**Radiation and energy propagation on ternary grids. Point sources, inverse-square falloff, diffusion, shadows, and half-life decay.**
+
+How does energy spread from a point source across a grid? Inverse-square law says the intensity falls off as 1/r². But on a discrete ternary grid, the continuous function is quantized: at each cell, the irradiance is snapped to {-1, 0, +1} based on configurable thresholds. Energy propagates outward, diffuses into neighbors, decays over time with configurable half-life, and is blocked by shadow-casting obstacles.
+
+This crate models all of that: point sources, field computation, diffusion, shadow casting, cascade events (chain reactions where irradiated cells become sources), and shielding effectiveness.
+
+## What's Inside
+
+- **`irradiance_field(sources, width, height)`** — compute irradiance at every cell from point sources using inverse-square law, snapped to ternary
+- **`diffuse(grid, width, rate)`** — one step of diffusion: each cell blends with its neighbors
+- **`shadow_cast(sources, obstacles, width, height)`** — compute shadow regions behind obstacles
+- **`half_life_decay(grid, half_life)`** — exponential decay: intensity halves every `half_life` ticks
+- **`cascade(grid, width, threshold)`** — cells above threshold become new sources (chain reaction)
+- **`shield_effectiveness(grid, width, shield_value)`** — how well does a shield value block propagation?
+
+## Quick Example
+
+```rust
+use ternary_irradiate::*;
+
+// Single point source at center of 20x20 grid
+let sources = vec![(10, 10)];
+let field = irradiance_field(&sources, 20, 20);
+// Center is +1, nearby cells are 0, distant cells are -1 (below threshold)
+
+// Add obstacles that cast shadows
+let obstacles = vec![(10, 5), (10, 6), (10, 7)]; // wall above source
+let shadow = shadow_cast(&sources, &obstacles, 20, 20);
+// Cells behind the wall (rows 0-4) are in shadow
+
+// Cascade: irradiated cells become sources
+let cascade_field = cascade(&field, 20, 1);
+// Any cell at +1 becomes a source, irradiating its neighbors
+
+// Decay over time
+let decayed = half_life_decay(&field, 10);
+// After 10 ticks, intensity has halved
+```
+
+=== ternary-ising ===
+desc: Ternary Ising model — spins on a lattice where 0 is the topological insulator
+lang: Rust
+# ternary-ising
+
+Ising model simulation for **ternary spin systems** {-1, 0, +1} with Metropolis-Hastings dynamics and critical temperature detection. The zero spin state acts as a **topological insulator** — a non-magnetic phase that breaks the binary up/down symmetry of classical Ising models.
+
+## Why It Matters
+
+The classical Ising model (Ising, 1925; Onsager, 1944) has two spin states: up (+1) and down (−1). Adding a third state (0) creates a **Blume-Capel model** (Blume, 1966; Capel, 1966) with rich phase behavior:
+
+- **Ferromagnetic phase**: Spins align (mostly +1 or mostly −1)
+- **Paramagnetic phase**: Random spins (uniform mix of −1, 0, +1)
+- **Insulator phase**: Dominated by 0-spins — no magnetic ordering
+- **Triple critical point**: Where all three phases meet
+
+The 0-spin is not just "no measurement" — it's a **topological insulator state** that interrupts magnetic interactions. Two neighboring +1 spins separated by a 0-spin do not interact, creating a lattice with position-dependent connectivity.
+
+Applications include:
+- Phase transitions in ternary magnetic materials
+- Ternary neural network energy landscapes (weights {-1, 0, +1})
+- Quantum annealing with three-state systems
+- Social dynamics with "neutral" agents
+
+## How It Works
+
+### Hamiltonian
+
+The ternary Ising Hamiltonian on a 2D lattice with periodic boundaries:
+
+```
+H = −J · Σ_{<i,j>} sᵢ · sⱼ
+```
+
+where sᵢ ∈ {−1, 0, +1}, J is the coupling constant, and ⟨i,j⟩ denotes nearest neighbors (4-connected).
+
+**Local energy** at site (r,c):
+
+```
+E(r,c) = −J · s_{r,c} · Σ_{neighbors} s_{nᵣ,n_c}
+```
+
+**Total energy** (avoiding double-counting):
+
+=== ternary-jam ===
+desc: ternary-jam  Musical jam session as multi-agent coordination
+lang: Rust
+# ternary-jam
+
+**A jam session in code. Agents that improvise, listen, respond, and surprise you.**
+
+A jam session isn't rehearsed. It's not scripted. Someone plays something, someone else responds, the energy builds, the room finds a groove, and for a few minutes everyone is thinking the same thought at the same time. Then it dissolves, reforms, goes somewhere new.
+
+This crate models that. Multiple ternary agents sit in a room. Each one has an instrument (a strategy for generating ternary values). They can hear each other. They respond to what they hear. Sometimes they lead, sometimes they follow. Sometimes they play something unexpected and everyone adjusts.
+
+The `JamSession` is the room. The `Player` is each musician. The `energy` is the vibe — high energy means everyone's playing hard, low energy means they're listening. The `calls` and `responses` are the musical conversation.
+
+## What's Inside
+
+- **`JamSession`** — the room. Manages players, rounds, energy tracking, and history
+- **`Player`** — a musician with a strategy, energy level, and response tendency
+- **`jam_round(session)`** — one round of the jam. Each player responds to the previous round
+- **`call_and_response(caller, responder, history)`** — the fundamental musical conversation. One player calls, the other responds
+- **`energy_level(session)`** — measure the room's energy. High = lots of ±1 activity, low = lots of 0
+- **`groove_detector(history)`** — has the room found a repeating pattern? Is there a groove?
+- **`surprise_score(play, expected)`** — how unexpected was this play? Surprise drives musical interest
+- **`trade_fours(players, rounds)`** — jazz tradition: players take 4-bar solos in turn
+
+## Quick Example
+
+```rust
+use ternary_jam::*;
+
+// Set up a jam with 4 players
+let mut session = JamSession::new(4);
+
+// Player 0 leads with a pattern
+session.set_lead(0, vec![1, 0, -1, 0, 1, 0, -1, 0]);
+
+// Run 16 rounds of improvisation
+for _ in 0..16 {
+    jam_round(&mut session);
+}
+
+// Check the energy
+let energy = energy_level(&session);
+println!("Room energy: {:.2}", energy);
+
+=== ternary-knn ===
+desc: K-Nearest Neighbors for Ternary Vector Spaces
+lang: Rust
+# ternary-knn
+
+K-nearest neighbors **classification** for ternary vector spaces {-1, 0, +1}, using a ternary-specific distance metric and brute-force neighbor search.
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+---
+
+## Why this exists
+
+Standard KNN on continuous vectors uses Euclidean or cosine distance. When your features are ternary — quantized neural activations, balanced ternary processor states, trit-based cryptographic keys — those generic metrics leave information on the table. The distance between `+1` and `-1` is not the same as the distance between `+1` and `0`: one is a disagreement, the other is an *opposition*. This crate encodes that distinction directly into the distance metric.
+
+## The key insight
+
+Ternary distance has three levels, not two. In binary space, two bits either match (distance 0) or don't (distance 1). In ternary space:
+
+| Pair | Cost | Meaning |
+|------|------|---------|
+| same value | 0 | agreement |
+| ±1 vs 0 | 1 | one is silent, the other isn't |
+| +1 vs −1 | 2 | active disagreement — the signal is inverted |
+
+This three-level metric captures *structural* disagreement that Hamming distance can't. A zero-vs-nonzero mismatch is a soft disagreement; a +1-vs-−1 mismatch is a hard contradiction. That distinction matters when you're classifying quantized patterns.
+
+Trit distance is a **proper metric**: it is non-negative, symmetric, identity-of-indiscernibles holds, and the triangle inequality is satisfied (the worst case is `+1 → 0 → -1`, where `d(+1,-1) = 2 = 1 + 1`).
+
+## Quick Start
+
+```rust
+use ternary_knn::{validate_ternary, DataPoint, KNNClassifier, TernaryDataset};
+
+// Build a labeled dataset of ternary vectors. Labels are i32.
+let dataset = TernaryDataset::new(vec![
+    DataPoint::new(vec![1, 1, 1], 1),
+    DataPoint::new(vec![1, 1, -1], 1),
+    DataPoint::new(vec![-1, -1, -1], 0),
+    DataPoint::new(vec![-1, -1, 1], 0),
+])
+.unwrap();
+
+
+=== ternary-kuramoto ===
+desc: Discrete Kuramoto oscillator for ternary {-1,0,+1} systems
+lang: Rust
+# ternary-kuramoto
+
+**The failure of synchronization in ternary systems. Proof that 0 kills collective rhythm.**
+
+The Kuramoto model is the simplest model of synchronization: a population of oscillators, each spinning at its own natural frequency, coupled to its neighbors through a simple interaction. With enough coupling, they synchronize — all fire together, like fireflies or cardiac cells or metronomes on a shared surface.
+
+But not in ternary. This crate proves why.
+
+When you project continuous phases onto `{-1, 0, +1}` — mapping 0°→+1, 120°→0, 240°→-1 — the 0 state acts as a *phase insulator*. Oscillators that land on 0 contribute nothing to the collective order parameter. They're invisible to the coupling force. And because ternary projection is coarse — each bucket spans 120° — the resulting order parameter can never reach 1.0 even when the underlying continuous phases are perfectly aligned.
+
+**The ternary Kuramoto model cannot fully synchronize.** This isn't a bug in the implementation. It's a theorem about discrete projection.
+
+## What's Inside
+
+- **`phase_to_ternary(phase)`** — project a continuous phase angle to {-1, 0, +1} using 120° sectors
+- **`ternary_to_phase(t)`** — the inverse mapping (representative angle for each ternary value)
+- **`KuramotoNetwork`** — N oscillators with phases, natural frequencies, coupling strength, and adjacency matrix
+- **`order_parameter()`** — the Kuramoto order parameter R ∈ [0, 1]. R = 1 means full sync. In ternary: R < 1 always
+- **`step(dt)`** / **`run(steps, dt)`** — advance the simulation, return R history
+- **`to_ternary()`** — snapshot of current ternary states
+- **`is_chimera()`** — detect chimera states: some synced, some not (the most interesting failure mode)
+- **`group_coherence(groups)`** — order parameter per subgroup. Measure who's together and who's lost
+
+## Quick Example
+
+```rust
+use ternary_kuramoto::*;
+
+// 20 oscillators, strong coupling
+let mut net = KuramotoNetwork::new(20, 5.0);
+
+// Run 500 steps
+let history = net.run(500, 0.1);
+
+// Even with strong coupling, ternary projection limits R
+let final_r = history.last().unwrap();
+// R ≈ 0.8-0.9 but never 1.0 — the 0 sector absorbs coherence
+
+// Check for chimera states
+if net.is_chimera() {
+
+=== ternary-language ===
+desc: Language and grammar processing with ternary sentiment
+lang: Rust
+# ternary-language
+
+Language and grammar processing with ternary sentiment — tokenization, sentiment classification, context-free grammars, recursive-descent parsing, and Markov-chain language models over {-1, 0, +1} states.
+
+## Why This Exists
+
+NLP typically uses continuous embeddings and large models. But there's a useful niche where text processing maps directly onto ternary signals: sentiment (negative / neutral / positive), decision labels (reject / abstain / approve), and grammar symbols that carry ternary payloads. This crate provides self-contained, zero-dependency tools for ternary-aware text processing — from tokenization and sentiment scoring through full grammar-based parsing and statistical language modeling. `forbid(unsafe_code)` throughout.
+
+## Core Concepts
+
+- **Sentiment**: Ternary label — `Negative` (-1), `Neutral` (0), `Positive` (+1).
+- **TernaryTokenizer**: Splits text into tokens, assigns sentiment based on a built-in or custom lexicon.
+- **SentimentClassifier**: Aggregates token-level sentiment into document-level classification with confidence scores.
+- **TernaryGrammar**: Context-free grammar with ternary-valued symbols; generate all strings up to a depth.
+- **TernaryParser**: Recursive-descent parser for `TernaryGrammar`; produces `ParseNode` trees.
+- **TernaryLanguageModel**: Markov-chain model over ternary states with transition probabilities, sequence scoring, and next-state prediction.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-language = "0.1"
+```
+
+```rust
+use ternary_language::{
+    SentimentClassifier, TernaryTokenizer, Sentiment,
+    TernaryGrammar, TernarySymbol, ProductionRule, TernaryParser,
+    TernaryLanguageModel,
+};
+
+fn main() {
+    // Sentiment analysis
+    let classifier = SentimentClassifier::new();
+    assert_eq!(classifier.classify("I love this amazing day"), Sentiment::Positive);
+    assert_eq!(classifier.classify("I hate this terrible weather"), Sentiment::Negative);
+
+    let (sent, confidence) = classifier.classify_with_confidence("great great great");
+    println!("Sentiment: {:?}, confidence: {:.2}", sent, confidence);
+
+=== ternary-lattice ===
+desc: Lattice structures for ternary values
+lang: Rust
+# ternary-lattice
+
+Lattice-based cryptographic primitives over ℤ₃. Implements vector addition, matrix multiplication, inner products, and Learning-With-Errors (LWE) sample generation — all operating in the ternary ring where every element is {-1, 0, +1}.
+
+## Why It Matters
+
+Post-quantum cryptography (PQC) relies heavily on lattice problems — the shortest vector problem (SVP) and learning-with-errors (LWE) are believed hard even for quantum computers (Regev, 2005). Operating these schemes over ℤ₃ offers unique advantages:
+
+- **Minimal key size**: 2 bits per coefficient = 16× smaller keys than FP32-based schemes
+- **No multiplication needed**: All products are in {-1, 0, +1} — computable with a sign flip or zero check
+- **Constant-time operations**: ℤ₃ arithmetic has no data-dependent branching, eliminating timing side-channels
+- **Hardware-friendly**: Maps directly to ternary logic gates (ternary ALUs)
+
+The Learning-With-Errors problem over ℤ₃: given random vector **a** and scalar b = ⟨**a**, **s**⟩ + e (mod 3), find secret **s**. The error term e makes this intractable even for quantum adversaries.
+
+## How It Works
+
+### ℤ₃ Arithmetic
+
+All operations use modular arithmetic over the field ℤ₃ = {−1, 0, +1} (isomorphic to {0, 1, 2}):
+
+**Addition table** (tadd):
+
+| +  | −1 |  0 | +1 |
+|----|----|----|-----|
+| −1 | +1 | −1 |  0 |
+|  0 | −1 |  0 | +1 |
+| +1 |  0 | +1 | −1 |
+
+Note: 1 + 1 = 2 ≡ −1 (mod 3). This is the key identity — addition wraps around.
+
+**Multiplication table** (tmul):
+
+| ×  | −1 |  0 | +1 |
+|----|----|----|-----|
+| −1 | +1 |  0 | −1 |
+|  0 |  0 |  0 |  0 |
+| +1 | −1 |  0 | +1 |
+
+Multiplication is equivalent to standard integer multiplication reduced mod 3. Zero is absorbing.
+
+=== ternary-lease ===
+desc: Distributed lease management for GPU resources with ternary states. {+1=held, 0=expired, -1=revoked}. Renewal, revocation, deadlock detection.
+lang: Rust
+# ternary-lease
+
+Distributed lease management for GPU resources with **ternary lease states**: **{+1 = held, 0 = expired, −1 = revoked}**. Provides time-to-live (TTL) based expiration, explicit revocation, and deadlock detection for multi-worker GPU clusters.
+
+## Why It Matters
+
+When multiple workers compete for GPU resources (tensor memory, compute streams, model slots), they need a coordination mechanism to prevent simultaneous access. Distributed leases are the standard solution (Gray & Reuter, 1993), but classical binary lease systems (granted/not-granted) cannot distinguish between:
+
+- **Expired** (TTL elapsed, lease lapsed naturally) — safe to reclaim
+- **Revoked** (explicitly taken away, holder may be non-cooperative) — requires repair
+
+The ternary state {+1, 0, −1} makes this distinction explicit:
+- **+1 (Held)**: Active lease. The holder has exclusive access for `remaining` ticks.
+- **0 (Expired)**: TTL elapsed. The resource is eligible for re-acquisition.
+- **−1 (Revoked)**: Forcefully terminated. The holder may need cleanup or reconciliation.
+
+This three-state model enables more nuanced recovery policies than binary granted/revoked systems.
+
+## How It Works
+
+### Lease Lifecycle
+
+```
+   acquire()
+      │
+      ▼
+  ┌────────┐   tick() decrements   ┌─────────┐
+  │ Held   │ ──── remaining=0 ──► │ Expired │
+  │ (+1)   │                       │ (0)     │
+  └────────┘                       └─────────┘
+      │                                 │
+      │ revoke()                        │ acquire() reclaims
+      ▼                                 ▼
+  ┌─────────┐                      new lease
+  │ Revoked │
+  │ (−1)    │
+  └─────────┘
+```
+
+### TTL Mechanism
+
+=== ternary-lighthouse ===
+desc: Guidance and warning system for fleet navigation
+lang: Rust
+# ternary-lighthouse
+
+Guidance and warning system for fleet navigation. Implements beacons for emitting directional signals, foghorns for low-visibility warnings, lenses for focusing attention, coded light patterns for identification, and watchkeepers for monitoring dangers — all using ternary directional semantics {-1, 0, +1}.
+
+## Why It Matters
+
+Autonomous fleet management requires reliable navigation aids. Physical lighthouses solve this for maritime navigation by providing:
+- **Beacons** — persistent signals for orientation ("you are here relative to me")
+- **Foghorns** — auditory warnings when visibility is poor (analog: degraded system health)
+- **Coded patterns** — unique identifiers distinguishing one light source from another
+- **Watchkeepers** — continuous monitoring with escalation protocols
+
+This crate translates these concepts to fleet management for GPU compute clusters:
+- **Beacons** = service health signals with ternary direction (negative/neutral/positive)
+- **Foghorns** = severity-tiered alerts (Low → Medium → High → Critical)
+- **Lenses** = attention-focusing filters that prioritize certain signal types
+- **Watchkeepers** = rule-based monitors that detect dangerous conditions
+
+The ternary direction {-1, 0, +1} encodes whether a signal is negative (trouble), neutral (informational), or positive (healthy), giving consumers a three-state semantic without parsing message content.
+
+## How It Works
+
+### Signal Model
+
+Each beacon emits a `Signal`:
+
+```
+Signal = {
+    source: String,        // beacon identifier
+    direction: Ternary,    // −1 = negative, 0 = neutral, +1 = positive
+    strength: f64,         // [0.0, ∞) — signal amplitude
+    message: String        // human-readable content
+}
+```
+
+The ternary direction provides **O(1) triage** — a consumer can filter signals by direction without parsing:
+
+```
+signals.filter(|s| s.direction == Ternary::Neg)  // all trouble signals
+```
+
+=== ternary-llm ===
+desc: Ternary LLM building blocks: token embeddings, transformer blocks with ternary weights, BitNet 1.58-bit quantization, KV-cache compression
+lang: Rust
+# ternary-llm
+
+BitNet 1.58-bit large language model building blocks in pure Rust. Each weight is stored as a trit ∈ {-1, 0, +1} alongside a single per-tensor float scale, enabling **~20× memory compression** over FP32 with minimal quality loss.
+
+## Why It Matters
+
+Modern LLMs are memory-bound: the cost of loading weights dwarfs the arithmetic. BitNet 1.58-bit quantization represents every weight with just `log₂(3) ≈ 1.585` bits, turning a 4-billion-parameter model from 16 GB (FP32) down to ~0.8 GB. Because the weights are ternary, matrix multiplication reduces to integer addition and subtraction — no floating-point multiply needed in the inner loop.
+
+## How It Works
+
+### Quantization
+
+Given a weight tensor **W** ∈ ℝⁿ, compute the scale:
+
+$$s = \frac{1}{n}\sum_{i=1}^{n} |w_i|$$
+
+Then quantize each weight:
+
+$$\tilde{w}_i = \operatorname{clip}\!\left(\operatorname{round}\!\left(\frac{w_i}{s}\right),\;-1,\;+1\right) \in \{-1, 0, +1\}$$
+
+Dequantization is simply $\hat{w}_i = \tilde{w}_i \cdot s$.
+
+### Ternary Linear Layer
+
+Forward pass for `TernaryLinear`:
+
+$$\text{out}_i = s \cdot \sum_{j=1}^{d_{\text{in}}} \tilde{W}_{ij} \cdot x_j + b_i$$
+
+Since $\tilde{W}_{ij} \in \{-1, 0, +1\}$, each multiply-accumulate becomes an **add, subtract, or no-op** — O(1) with zero hardware multipliers.
+
+**Complexity:** O(d_out × d_in) per forward pass — same asymptotic order as dense FP32, but with a ~4-8× wall-clock speedup from eliminating floating-point multiplication.
+
+### Scaled Dot-Product Attention
+
+$$\text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+
+Q, K, V are produced by ternary projection layers. The attention scores are computed in float space to preserve numerical stability.
+
+### KV-Cache Compression
+
+
+=== ternary-locks ===
+desc: Lock algebra inspired by Oracle1's research
+lang: Rust
+# ternary-locks
+
+Lock algebra for ternary pattern abstraction — constraint composition, compression, dependency graphs, critical mass detection, and graveyard archaeology for expired patterns.
+
+## Why This Exists
+
+In complex systems, **patterns** are how we recognize structure. But raw patterns are noisy and redundant. This crate provides a mathematical framework for abstracting ternary patterns {-1, 0, +1} into **locks** — composable constraints that can be combined (AND/OR/NOT), compressed by merging overlapping coverage, tracked through dependency graphs, and analyzed even after expiration.
+
+The name comes from Oracle1's research into "lock" as a pattern abstraction: a lock is a constraint that must be satisfied, where 0 acts as a wildcard (don't care). Locks compose algebraically — you can AND two locks for intersection, OR for union, NOT for negation. This creates a rich algebra for reasoning about ternary pattern spaces.
+
+The **graveyard** module tracks expired locks and enables "archaeology" — analyzing which patterns were strongest when they died, which could be revived, and computing the half-life of the lock population. This is pattern-level memory for evolving systems.
+
+This crate is part of the **Negative Space Intelligence** ecosystem.
+
+## Core Concepts
+
+- **Lock** — A ternary pattern with an ID, strength, and active flag. Zeros are wildcards; non-zero positions are constraints. Supports satisfaction checking and specificity comparison.
+- **LockComposition** — Algebraic composition of locks via AND, OR, NOT. Evaluates against a set of satisfied lock IDs. Supports tree depth and referenced ID extraction.
+- **Lock Compression** — Merges overlapping locks by filling in wildcards from compatible patterns, reducing redundancy while preserving coverage.
+- **LockGraph** — Dependency graph with topological ordering, cycle detection, and transitive dependent lookup.
+- **Graveyard** — Cemetery for expired locks with strength analytics, pattern frequency analysis, revival detection, and half-life computation.
+- **Transfer Score** — Measures how well patterns from one domain transfer to another.
+- **Critical Mass Detection** — Determines when enough locks cover a pattern space sufficiently.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-locks = "0.1"
+```
+
+```rust
+use ternary_locks::*;
+use std::collections::HashSet;
+
+// Create locks with ternary patterns (0 = wildcard)
+let lock_a = Lock::new("pattern_a", vec![1, 0, -1]);   // match +1, any, -1
+let lock_b = Lock::new("pattern_b", vec![1, -1, 0]);   // match +1, -1, any
+
+
+=== ternary-logistic ===
+desc: ternary-logistic - SuperInstance ecosystem crate
+lang: Rust
+# ternary-logistic
+
+Logistic regression where every feature is {−1, 0, +1}.
+
+## When to use this
+
+Use this crate when your features are already ternary-valued (`{-1, 0, +1}`) and you need **calibrated probabilities**, not just labels. Common scenarios:
+
+- **Ternary neural networks** — classify samples by their quantized weight activations.
+- **Balanced-ternary encodings** — hash codes, feature fingerprints, or signal quantization.
+- **Ternary hash codes** — similarity-based retrieval where you need a probability head.
+
+Because every feature shares the same bounded range, you get **no scaling needed, no one-hot encoding, and forgiving learning rates**. For continuous targets use [ternary-regression](https://github.com/SuperInstance/ternary-regression); for clustering before classification use [ternary-em](https://github.com/SuperInstance/ternary-em).
+
+## The Problem
+
+You need to classify data with ternary features — quantized weights, ternary hash codes, balanced ternary encodings — and you need calibrated probabilities, not just labels. Standard logistic regression works, but it carries baggage: feature scaling, one-hot encoding for categoricals, learning rate schedules designed for continuous inputs. With ternary features, none of that applies.
+
+The deeper problem: most logistic regression implementations treat the feature space as unbounded. When features are bounded to three values, the dot product `w·x` has a predictable range, the gradient has a predictable structure, and the optimizer can use larger learning rates without instability. General-purpose libraries don't exploit this.
+
+## The Insight
+
+With ternary features, the gradient of the log-loss with respect to weight `j` is:
+
+```
+∂L/∂wⱼ = (ŷ − y) · xⱼ / n
+```
+
+Since `xⱼ ∈ {-1, 0, +1}`, this gradient is one of three discrete values scaled by the prediction error. The optimizer moves in steps of size `lr · (ŷ − y)` or zero — there's no gradual drift from a continuous feature. This natural discretization prevents oscillation and makes convergence predictable.
+
+For the multinomial case (3-class softmax), the same property holds: the error `pₖ − 𝟙(y=k)` is multiplied by ternary features, so gradients are bounded and learning rate tuning is forgiving.
+
+**Three more structural properties of ternary features:**
+1. No missing values — zero is a valid, meaningful value ("neutral"), not absence.
+2. No scaling needed — all features have the same range. No `StandardScaler`.
+3. Linear separability is common — ternary encodings tend to spread classes along clean decision boundaries.
+
+## How It Works
+
+Two models, one optimization strategy (gradient descent), one key difference (sigmoid vs. softmax).
+

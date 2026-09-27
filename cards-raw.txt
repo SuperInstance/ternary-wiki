@@ -1,0 +1,906 @@
+===== REPO: c-ternary
+LANG: C
+DESC: Minimal C99 header-only library for ternary logic: trit type, conviction mapping, Leminal Zone deadband, AND/OR/NOT/XOR/implication gates
+===== REPO: federated-ternary
+LANG: Rust
+DESC: Experiment: federated ternary learning. Multiple nodes train ternary weights locally, merge via element-wise majority vote (CRDT-style). Byz
+===== REPO: ternary-accumulator
+LANG: Rust
+DESC: Ternary gradient accumulation for sign-based training. Majority vote, momentum, entropy, checkpoint/restore.
+===== REPO: ternary-activation
+LANG: Rust
+DESC: ternary-activation - SuperInstance ecosystem crate
+README-BEGIN
+# ternary-activation
+
+**Non-linearities born ternary — ReLU, sigmoid, tanh, GELU, and softmax, mapped to {-1, 0, +1}.**
+
+[![crates.io](https://img.shields.io/crates/v/ternary-activation.svg)](https://crates.io/crates/ternary-activation)
+[![docs.rs](https://docs.rs/ternary-activation/badge.svg)](https://docs.rs/ternary-activation)
+
+## Why This Exists
+
+Activation functions are what make neural networks nonlinear. Without them, stacking layers is just one big linear transformation. ReLU kills negatives. Sigmoid squashes to (0, 1). GELU gates by magnitude. Tanh saturates symmetrically.
+
+In a ternary network, all values are {-1, 0, +1}. You can't apply continuous ReLU and get a continuous output — you'd leave ternary space. You need activation functions that *quantize* their outputs while preserving the essential shape of the original: monotonicity, symmetry, saturation behavior.
+
+This crate provides principled ternary approximations of seven classic activation functions, plus batch application utilities.
+
+## The Key Insight
+
+Every activation in this crate follows one pattern: compute the continuous version, then quantize to the nearest trit via threshold rounding:
+
+```
+f(x) < -threshold → -1
+|f(x)| ≤ threshold →  0
+f(x) >  threshold → +1
+```
+
+The threshold varies by function. For sign, it's 0. For tanh, it's 1/3 (relative to tanh's output range). For GELU and Swish, it's 0.5. This isn't arbitrary — each threshold is chosen so the ternary approximation preserves the critical inflection points of the continuous function.
+
+The result: activation functions that behave like their continuous counterparts *at decision boundaries* while living entirely in Z₃.
+
+## Quick Start
+
+```toml
+[dependencies]
+ternary-activation = "0.1"
+```
+
+```rust
+use ternary_activation::*;
+
+// Individual activations — continuous input → Trit output
+README-END
+===== REPO: ternary-adversarial
+LANG: Rust
+DESC: Ternary Adversarial  Adversarial testing for ternary agents — stress-testing strategies against...
+===== REPO: ternary-agent
+LANG: Rust
+DESC: Core agent types for the ternary ecosystem
+README-BEGIN
+# Ternary Agent
+
+Core agent types for the **ternary ecosystem** — a framework where every agent operates in one of three states drawn from balanced ternary {-1, 0, +1}: **Avoid**, **Explore**, or **Choose**. Provides agent memory (short-term + long-term with decay), threshold-based strategies, fitness tracking, agent pools with ranking, and inter-agent message passing.
+
+## Why It Matters
+
+Agent frameworks typically model behavior as continuous-valued functions or finite state machines with dozens of states. The ternary approach constrains agents to exactly three behavioral modes, mapped to the balanced ternary digit set:
+
+| Trit | State | Semantics |
+|------|-------|-----------|
+| -1 | Avoid | Retreat, reject, diverge |
+| 0 | Explore | Gather information, remain neutral |
+| +1 | Choose | Commit, select, converge |
+
+This constraint is a feature, not a limitation. It forces crisp decision boundaries and enables population-level analysis: you can compute the **γ (signed charge)** of an entire agent pool with a single sum, and track how it evolves over time. The three-state model also maps directly to Z₃ cyclic dominance (rock-paper-scissors dynamics), which is the natural coordination mechanism for ternary multi-agent systems.
+
+## How It Works
+
+### Ternary State Machine
+
+Each agent holds a `TernaryState` that cycles: Avoid → Explore → Choose → Avoid. The state is updated by a `Strategy` — a trait that takes the current state plus a numeric score and returns the next state:
+
+$$s_{t+1} = \text{strategy}(s_t, \text{score}_t)$$
+
+The default `ThresholdStrategy` uses upper and lower bounds:
+
+$$s_{t+1} = \begin{cases} \text{Choose} & \text{score} \geq \theta_{\text{upper}} \\ \text{Avoid} & \text{score} \leq \theta_{\text{lower}} \\ \text{Explore} & \text{otherwise} \end{cases}$$
+
+### Memory Model
+
+Agent memory has two tiers:
+
+- **Short-term**: recent observations with strength = 1.0, wiped on decay
+- **Long-term**: committed memories with exponential strength decay: $s_i(t) = s_i(0) \cdot \alpha^t$
+
+Memories below `min_strength` are pruned. This implements a **forgetting curve** consistent with Ebbinghaus-type memory models.
+
+### Agent Pool Dynamics
+
+The pool supports fitness-based ranking. At each tick:
+README-END
+===== REPO: ternary-anchor
+LANG: Rust
+DESC: ternary-anchor: Stability and persistence for rooms in dynamic fleet environments
+===== REPO: ternary-antidote
+LANG: Rust
+DESC: CRDTs for GPU cluster state with ternary merge outcomes. G-Counter, LWW-Register, OR-Set.
+===== REPO: ternary-attention
+LANG: Rust
+DESC: Attention mechanisms adapted for ternary inputs on {-1, 0, +1}
+===== REPO: ternary-auction
+LANG: Rust
+DESC: Ternary auction mechanisms — {-1,0,+1} bidding
+README-BEGIN
+# Ternary Auction
+
+Mechanism design for **ternary {-1, 0, +1} resource allocation** — implementing Vickrey auctions, VCG mechanisms, strategy-proofness verification, and ternary signal resolution. Every bid is a trit, every allocation provably efficient.
+
+## Why It Matters
+
+Classical auction theory assumes continuous or discrete bid spaces. When agents are constrained to ternary bids {-1 (pass), 0 (weak), +1 (strong)}, the mechanism design problem becomes both simpler and more subtle:
+
+- **Simpler**: The allocation rule is a simple sort. Payment rules reduce to counting.
+- **Subtler**: With only 3 bid levels, the incentive compatibility constraints bind differently. Truthful bidding is still optimal in Vickrey, but the proof requires checking all $3^N$ possible misreports for N bidders.
+
+This crate implements the full verification loop: run the auction, then exhaustively check that no bidder could benefit from any alternative ternary bid. The `verify_truthfulness` function performs this $\Theta(N \cdot 3)$ check.
+
+## How It Works
+
+### Vickrey Auction (Second-Price Sealed-Bid)
+
+Given bids $b_1 \geq b_2 \geq \cdots \geq b_N$ where each $b_i \in \{0, 1, 2\}$ (Pass, Weak, Strong):
+
+$$\text{winner} = \arg\max_i b_i$$
+$$\text{price} = b_{(2)} = \text{second-highest bid}$$
+
+The winner's utility is $u_i = v_i - p$ where $v_i$ is their true valuation. Since the price is independent of the winner's bid, truthful bidding is a **weakly dominant strategy** — formally proven by the verification check.
+
+### VCG Mechanism (Multi-Item)
+
+For $K$ items, VCG runs independent Vickrey auctions per item (when bids are independent). The VCG payment rule charges each winner the **externality** they impose on others:
+
+$$p_i = \sum_{j \neq i} v_j(\text{allocation without } i) - \sum_{j \neq i} v_j(\text{actual allocation})$$
+
+### Ternary Signal Resolution
+
+Beyond auctions, the `TernaryResolver` aggregates competing {-1, 0, +1} signals into a consensus:
+
+$$\text{resolve}(\vec{s}) = \text{sign}\left(\sum_{i} s_i\right)$$
+
+With confidence measured as the fraction agreeing with the outcome: $c = |\{i : s_i = r\}| / N$.
+
+### Complexity
+
+README-END
+===== REPO: ternary-automata
+LANG: Rust
+DESC: Cellular automata with ternary states
+README-BEGIN
+# ternary-automata
+
+**Cellular automata with ternary states: Wolfram numbering, elementary rules, simulation, and pattern analysis for 3-state systems.**
+
+`ternary-automata` extends classical two-state cellular automata (CA) to three states $\{0, 1, 2\}$, providing a complete framework for defining rules via Wolfram numbers, simulating evolution under various boundary conditions, detecting cycles, and measuring entropy evolution over time.
+
+## Why It Matters
+
+Cellular automata are the simplest known systems that produce emergent complexity from local rules. Stephen Wolfram's systematic study of binary CA (states $\{0, 1\}$, Rule 110) proved that even elementary rules can be **Turing complete**.
+
+Extending to three states $\{0, 1, 2\}$ dramatically increases the rule space:
+
+| Property | Binary CA | Ternary CA |
+|----------|-----------|------------|
+| Neighborhood size | $2^3 = 8$ | $3^3 = 27$ |
+| Possible rules | $2^{2^3} = 256$ | $3^{3^3} = 3^{27} \approx 7.6 \times 10^{12}$ |
+| Max Wolfram number | 255 | $3^{27} - 1 \approx 7.6 \times 10^{12}$ |
+
+The vastly larger rule space enables richer behavior: more complex patterns, longer transients, and richer entropy dynamics — all from local neighborhood rules.
+
+## How It Works
+
+### Ternary Wolfram Numbering
+
+Each ternary CA rule is a function mapping each of the 27 possible neighborhoods $(l, c, r) \in \{0,1,2\}^3$ to an output state $o \in \{0,1,2\}$. The neighborhood is encoded as a base-3 integer:
+
+$$\text{idx}(l, c, r) = 9l + 3c + r$$
+
+The **Wolfram number** $W$ is the base-3 representation of the output table:
+
+$$W = \sum_{i=0}^{26} o_i \cdot 3^i$$
+
+where $o_i$ is the output for neighborhood index $i$. The Wolfram number uniquely identifies each of the $\approx 7.6 \times 10^{12}$ possible ternary rules.
+
+**Decoding:** Extract outputs via iterated modular arithmetic:
+
+$$o_i = \left\lfloor \frac{W}{3^i} \right\rfloor \bmod 3$$
+
+**Complexity:** $O(1)$ for table lookup (`apply_neighborhood`); $O(27)$ for rule construction from a Wolfram number.
+
+README-END
+===== REPO: ternary-belief
+LANG: Rust
+DESC: Belief propagation on ternary factor graphs: sum-product message passing, loopy BP, evidence clamping, marginal inference
+===== REPO: ternary-bite
+LANG: Rust
+DESC: Bite for ternary systems — `crush`, `quantize`, `downsample`, `bit_rotate`
+===== REPO: ternary-bridge
+LANG: Rust
+DESC: Bridge pattern for connecting heterogeneous ternary systems
+README-BEGIN
+# ternary-bridge
+
+**Bridge pattern for connecting heterogeneous ternary systems with protocol and codec translation.**
+
+`ternary-bridge` provides the interop layer that makes different ternary subsystems communicate. It defines a generic `Bridge<A, B>` trait with `forward()` and `backward()` translations, plus concrete implementations for protocol bridging, wire-format codec conversion, memory model translation, and skill descriptor mapping.
+
+## Why It Matters
+
+In a fleet of ternary systems, different subsystems inevitably speak different dialects: one uses byte-per-trit wire encoding, another uses packed nibbles; one speaks the internal ternary-protocol format, another uses an external I2I oracle format. Without a structured bridge layer, translation logic scatters across the codebase as ad-hoc converters that are untestable, unmaintainable, and unverifiable.
+
+The bridge pattern solves this by defining a **bidirectional translation contract**:
+
+$$\text{forward}: A \to B, \qquad \text{backward}: B \to A$$
+
+Every bridge implementation must provide both directions, enabling roundtrip verification: $\text{backward}(\text{forward}(x)) \approx x$. This crate provides four production bridges and a registry for runtime lookup.
+
+## How It Works
+
+### The Bridge Trait
+
+The core abstraction is a generic trait parameterized by source type `A`, target type `B`, and an error type:
+
+```rust
+pub trait Bridge<A, B> {
+    type Error;
+    fn forward(&self, value: &A) -> Result<B, Self::Error>;
+    fn backward(&self, value: &B) -> Result<A, Self::Error>;
+}
+```
+
+Translations can fail — for example, decoding a byte value outside $\{-1, 0, +1\}$ yields `BridgeError`. The `Result` return type forces callers to handle translation failures explicitly.
+
+**Complexity:** Translation complexity is $O(n)$ in the payload size for all implemented bridges, involving element-wise mapping.
+
+### Protocol Bridge
+
+Translates between internal `ProtocolMessage` and external `OracleMessage` formats:
+
+| Field | ProtocolMessage | OracleMessage |
+|-------|-----------------|---------------|
+README-END
+===== REPO: ternary-btree
+LANG: Rust
+DESC: B-tree with ternary branching
+README-BEGIN
+# ternary-btree
+
+A pedagogical implementation of the **ternary B-tree** — a balanced search tree where every internal node stores up to two keys and branches three ways.
+
+---
+
+## What Problem Does This Solve?
+
+Binary search trees branch twice per node. A ternary B-tree branches **three** times, letting us pack more keys into each node and reducing tree height.
+
+### Why Ternary?
+
+In a B-tree of order *m*, each node holds at most *m* − 1 keys and has *m* children. Here *m* = 3, so:
+- **Maximum keys per node:** 2
+- **Maximum children per node:** 3
+
+**Height bound:** A ternary B-tree storing *n* keys has height
+
+$$h \leq \log_3(n + 1)$$
+
+Compare this to a binary search tree or binary B-tree (2-3 tree) with height
+
+$$h \leq \log_2(n + 1)$$
+
+Because $\log_3 n = \frac{\log_2 n}{\log_2 3} \approx 0.63 \cdot \log_2 n$, the ternary tree is roughly **37 % shorter** in the worst case. Fewer levels means fewer cache misses and fewer pointer traversals during search.
+
+### Pre-emptive Splitting
+
+Insertion uses **top-down pre-emptive splitting**: any full node encountered on the descent is split before recursion continues. This guarantees:
+- **No backtracking** — a single root-to-leaf pass
+- **O(log₃ n)** time per insertion
+- **No recursive rebalancing** on the way back up
+
+Deletion uses **rotation** (borrowing from siblings) or **merging** when a node underflows below the minimum key count (1), keeping the tree balanced.
+
+---
+
+## Mathematical Complexity Analysis
+
+| Operation | Binary BST (worst) | Binary B-tree (2-3) | **Ternary B-tree** |
+README-END
+===== REPO: ternary-budget
+LANG: Rust
+DESC: Ternary budget: resource allocation where items are {-1=over, 0=on-track, +1=under} budget
+===== REPO: ternary-bus
+LANG: Rust
+DESC: ternary-bus Communication bus for inter-room messaging with ternary payloads
+===== REPO: ternary-cadence
+LANG: Rust
+DESC: Cadence detection for agent outputs
+README-BEGIN
+# ternary-cadence
+
+**Cadence detection for agent outputs.**
+
+In music, a cadence is a harmonic progression that signals the end of a phrase — a moment of resolution, suspense, or surprise. This crate brings that concept to multi-agent systems, providing tools to detect when an agent's output stream is wrapping up, pivoting, or leaving you hanging.
+
+## Why Cadences?
+
+When orchestrating multiple AI agents, you need to know not just *what* they're saying, but *where they are* in their process. A cadence detector lets you:
+
+- **Detect task completion** — know when an agent has finished strong
+- **Identify pivots** — catch when an agent unexpectedly changes direction
+- **Monitor suspension** — recognize when an agent is stalled or waiting
+- **Profile agents** — learn which agents tend to produce which kinds of endings
+
+## Cadence Types
+
+### Perfect Authentic Cadence (V→I)
+The strongest resolution. The agent's confidence rises to a high value on a terminal output — the task is definitively complete. Like ending a piece on a triumphant tonic chord.
+
+```rust
+use ternary_cadence::{CadenceDetector, AgentOutput, CadenceType};
+
+let detector = CadenceDetector::default();
+
+let outputs = vec![
+    AgentOutput::new("Starting analysis...", 0.3, false),
+    AgentOutput::new("Narrowing down options", 0.6, false),
+    AgentOutput::new("The answer is 42", 0.95, true),
+];
+
+let cadence = detector.detect(&outputs).unwrap();
+assert_eq!(cadence.cadence_type, CadenceType::PerfectAuthentic);
+```
+
+### Plagal Cadence (IV→I)
+A gentle resolution. The agent finishes with stable or slightly declining confidence — the task is done, but without dramatic flair. The "Amen" cadence.
+
+### Deceptive Cadence (V→vi)
+A surprise. The output looked like it was heading for a clean finish, but then pivoted to new, non-terminal content. The agent thought it was done but discovered something new.
+README-END
+===== REPO: ternary-captain
+LANG: Rust
+DESC: Captain/leadership pattern for fleet coordination
+README-BEGIN
+# Ternary Captain
+
+**Ternary Captain** implements the captain/leadership pattern for fleet coordination — providing a `Captain` that leads agent groups, a `DecisionEngine` for ternary option weighing, a `Delegator` for task assignment, a `SituationRoom` for sensor aggregation, and a `SuccessionPlan` for captain handoff.
+
+## Why It Matters
+
+Every coordinated fleet needs a leader — but the leader must make decisions in ternary space (proceed +1, abstain 0, reject -1), delegate tasks to the right agents based on specialization, aggregate situational awareness from distributed sensors, and hand off leadership gracefully during failures. Ternary Captain provides all five primitives. It's the fleet-level analogue of `openmind-conductor`'s ensemble coordination, but focused on hierarchical command rather than peer-to-peer orchestration.
+
+## How It Works
+
+### Captain Decision Engine
+
+```
+DecisionEngine weighs options:
+    for each option:
+        compute weighted_sum = Σ (agent_fitness · agent_vote)
+        decision = ternary_sign(weighted_sum)
+            +1 if sum > threshold
+             0 if |sum| ≤ threshold
+            -1 if sum < threshold
+```
+
+Decision: **O(N)** for N agents voting. The threshold prevents flip-flopping on near-ties.
+
+### Delegation
+
+```rust
+delegate(task, agents) → assignment:
+    candidates = agents.filter(|a| a.status == Ready && a.specialization matches)
+    best = candidates.max_by(fitness)
+    assign task to best
+```
+
+Delegation: **O(N)** scan of agent list. Assignment tracking enables load balancing.
+
+### Situation Room
+
+Aggregates sensor data from all agents:
+
+```
+README-END
+===== REPO: ternary-cargo
+LANG: Rust
+DESC: Ternary Cargo — Resource transport and logistics between rooms
+===== REPO: ternary-causality
+LANG: Rust
+DESC: ternary-causality  Causal inference for ternary strategy systems
+===== REPO: ternary-cell
+LANG: Rust
+DESC: Ternary cell — the atomic unit
+README-BEGIN
+# Ternary Cell
+
+The **atomic unit of scale** — a 3-byte ternary cell that is stack-allocated, zero-allocation, and instantiable by the million. Every cell tracks three things: its state {-1, 0, +1}, how long it has been in that state (dwell), and how many times it has changed (flips). Everything else is computed from populations.
+
+## Why It Matters
+
+The `Cell` struct is deliberately minimal: 3 bytes, no heap allocation, no generics, no traits beyond `Debug + Clone + Copy + PartialEq + Eq`. This means:
+
+- **1 million cells = 3 MB** — fits in L3 cache on any modern CPU
+- **100 million cells = 300 MB** — fits in RAM, still cache-friendly
+- Population operations (census, entropy, gamma) operate on `&[Cell]` slices with zero allocation
+
+This design follows the **data-oriented design** (DOD) philosophy: separate data from behavior, lay out data for cache efficiency, and process populations in bulk. The cell is the struct-of-arrays (SoA) friendly atom that makes ternary simulation practical at scale.
+
+## How It Works
+
+### Cell Layout
+
+```rust
+pub struct Cell {
+    pub state: i8,   // -1, 0, or +1   (1 byte)
+    pub dwell: u8,   // ticks in current state, wraps at 255  (1 byte)
+    pub flips: u8,   // lifetime transition count, wraps at 255  (1 byte)
+}
+// Total: 3 bytes. No padding (all fields are u8-compatible).
+```
+
+The `assert!(std::mem::size_of::<Cell>() <= 3)` test enforces this at compile time.
+
+### State Transitions
+
+All transitions are O(1):
+
+| Operation | Effect |
+|-----------|--------|
+| `set(new_state)` | If different: update state, reset dwell, increment flips |
+| `tick()` | Increment dwell (saturating) |
+| `flip()` | Negate state (+1 ↔ -1, 0 stays 0), increment flips |
+| `tunnel(target)` | If state == 0: transition to target (forgiveness) |
+| `trap()` | If state ≠ 0: force to 0 (inhibition) |
+README-END
+===== REPO: ternary-channel
+LANG: Rust
+DESC: Communication channel abstractions for inter-room messaging
+README-BEGIN
+# Ternary Channel
+
+**Ternary Channel** provides communication abstractions for inter-room messaging — direct channels, broadcast, priority-ordered delivery, reliable transport with acknowledgment and retry, and multiplexing many logical channels over one connection.
+
+## Why It Matters
+
+Reliable communication between distributed rooms requires more than TCP: messages need priorities (urgent vs. normal), multiplexing (multiple logical streams over one connection), and reliability guarantees (at-least-once delivery with retry). Ternary Channel provides these with ternary priority levels {-1 (low), 0 (normal), +1 (high)}, enabling precedence-based message ordering that integrates with the ternary ecosystem.
+
+## How It Works
+
+### Channel Trait
+
+```rust
+trait Channel {
+    fn send(&mut self, msg: Message) -> Result<(), &'static str>;
+    fn try_recv(&mut self) -> Option<Message>;
+    fn close(&mut self);
+    fn state(&self) -> ChannelState;
+}
+```
+
+All implementations follow this trait. Send: **O(1)** amortized. Recv: **O(1)**.
+
+### Message Priority
+
+```rust
+enum TernaryPriority {
+    Negative = -1,  // Low priority, background tasks
+    Neutral = 0,    // Normal priority, default
+    Positive = 1,   // High priority, urgent alerts
+}
+```
+
+Priority queue orders messages: Positive before Neutral before Negative. Within same priority: FIFO.
+
+### Direct Channel
+
+Point-to-point channel with bounded buffer:
+
+```
+README-END
+===== REPO: ternary-checkpoint
+LANG: Rust
+DESC: Ternary model checkpointing with 16× compression. Pack 16 trits per u32, verify integrity, keep the best.
+===== REPO: ternary-circuit
+LANG: Rust
+DESC: Circuit and logic design with ternary values
+README-BEGIN
+# ternary-circuit
+
+A ternary logic circuit design library implementing multi-valued logic gates, truth-table generation, circuit composition, and minimization. Supports both **Kleene** (strong Kleene, K₃) and **Łukasiewicz** (Ł₃) three-valued logic systems.
+
+## Why It Matters
+
+Binary logic circuits cannot express uncertainty. In agent fleets, sensor readings, network state, and trust assessments are often unknown rather than definitively true or false. Three-valued logic (3VL) circuits allow hardware and software to propagate uncertainty through computation rather than collapsing it prematurely.
+
+The `Unknown` value (0) represents "insufficient evidence to decide." In Kleene's K₃, this is non-designated — it never causes a tautology — making it suitable for **conservative** decision-making where unknown inputs produce unknown outputs. In Łukasiewicz's Ł₃, certain compositions of Unknown can still yield True, enabling **optimistic** reasoning.
+
+Within the **γ + η = C** framework:
+
+| Symbol | Domain |
+|--------|--------|
+| γ | `Trit` ∈ {False(−1), Unknown(0), True(+1)} — signal values on circuit wires |
+| η | Gate selection and logic system choice (Kleene vs Łukasiewicz) |
+| C | Logical constraints: truth-table semantics, consistency rules |
+
+## How It Works
+
+### Three-Valued Logic Systems
+
+#### Kleene's Strong Logic (K₃)
+
+Operations use the **knowledge ordering**: Unknown is between False and True.
+
+| AND | F | U | T | | OR | F | U | T |
+|-----|---|---|---| |----|---|---|---|
+| **F** | F | F | F | | **F** | F | U | T |
+| **U** | F | U | U | | **U** | U | U | T |
+| **T** | F | U | T | | **T** | T | T | T |
+
+NOT: F↔T, U→U.
+
+AND is implemented as **min** over the ordering F < U < T, and OR as **max**:
+
+$$\text{AND}(a, b) = \min(a, b), \qquad \text{OR}(a, b) = \max(a, b)$$
+
+where the total order is −1 < 0 < +1.
+
+README-END
+===== REPO: ternary-cli
+LANG: Rust
+DESC: CLI tools for the ternary computing ecosystem. Inspect, validate, and benchmark Z₃ operations.
+===== REPO: ternary-clustering
+LANG: Rust
+DESC: ternary-clustering  Clustering algorithms for ternary data represented as vectors of `Ternary` ...
+===== REPO: ternary-codes
+LANG: Rust
+DESC: Error-correcting codes for ternary data
+README-BEGIN
+# Ternary Codes
+
+**Ternary Codes** implements error-correcting codes for ternary data in {-1, 0, +1} — providing Hamming codes over GF(3), repetition codes, parity checks, syndrome decoding, and code distance calculation.
+
+## Why It Matters
+
+Noise corrupts data in storage, transmission, and computation. Error-correcting codes detect and correct this noise. While binary codes (Hamming, Reed-Solomon) are well-established, ternary codes over GF(3) offer advantages: more efficient packing (log₂3 ≈ 1.585 bits per trit vs 1 bit), better error-correcting capability for burst errors, and natural compatibility with ternary arithmetic hardware. The ternary Golay code is one of the most beautiful objects in coding theory — a perfect code with deep connections to combinatorics.
+
+## How It Works
+
+### GF(3) Arithmetic
+
+All operations in the Galois field GF(3) = {0, 1, 2}:
+
+```
+Addition mod 3:
+  + | 0  1  2
+  0 | 0  1  2
+  1 | 1  2  0
+  2 | 2  0  1
+
+Multiplication mod 3:
+  × | 0  1  2
+  0 | 0  0  0
+  1 | 0  1  2
+  2 | 0  2  1
+```
+
+Mapping to ternary: 0→Zero, 1→Pos, 2→Neg. All GF(3) operations: **O(1)**.
+
+### Ternary Hamming Code
+
+A [n, k, d] code over GF(3) with:
+- n = (3^r - 1) / 2 code symbols (for r parity symbols)
+- k = n - r information symbols
+- d = 3 minimum distance (corrects 1 error)
+
+**Encoding:**
+```
+codeword = data · G    (G = generator matrix, n×k over GF(3))
+README-END
+===== REPO: ternary-collatz
+LANG: Rust
+DESC: Collatz for ternary systems — `ternary_value`, `collatz_step`, `collatz_sequence`, `ternary_collatz_sequence`
+===== REPO: ternary-color
+LANG: Rust
+DESC: ternary-color  Color theory and perception with ternary classification
+===== REPO: ternary-compass
+LANG: Rust
+DESC: Orientation and direction in ternary state space
+README-BEGIN
+# Ternary Compass
+
+**Ternary Compass** provides orientation and direction in ternary state space — modeling navigational instruments (compass, gyroscope, sextant) that help agents understand their position, heading, and rate of change within the {-1, 0, +1} landscape.
+
+## Why It Matters
+
+Agents navigating a ternary state space need to know where they are, which direction they're heading, and whether they're moving toward or away from goals. Ternary Compass provides these primitives: bearings (Approach +1, Avoid -1, Neutral 0), heading estimation from state deltas, gyroscopic stabilization against noise, and anomaly detection for disorientation. This is the navigational layer that enables strategic movement rather than random exploration.
+
+## How It Works
+
+### Bearing
+
+The fundamental direction in ternary space:
+
+```
+Bearing::Approach  → moving toward +1 (positive growth)
+Bearing::Avoid     → moving toward -1 (negative/avoidance)
+Bearing::Neutral   → holding at 0 (no change)
+```
+
+Bearing from state delta: `bearing = sign(delta)`. Computed in **O(1)**.
+
+### Angular Representation
+
+Bearings map to angles in 2D ternary space:
+
+```
+Neutral  → 0 radians
+Approach → +π/3 (60°)
+Avoid    → -π/3 (-60°)
+```
+
+Angular distance between bearings: **O(1)** subtraction.
+
+### Heading Estimation
+
+From a sequence of ternary states, estimate the heading:
+
+```
+heading = weighted_average(recent_deltas)
+README-END
+===== REPO: ternary-conduct
+LANG: Rust
+DESC: ternary-conduct  Orchestration and tempo control for coordinated ternary fleet operations
+===== REPO: ternary-consensus
+LANG: Rust
+DESC: ternary-consensus  Consensus algorithms for distributed ternary agents
+===== REPO: ternary-conserve
+LANG: Rust
+DESC: Parametric conservation across resource domains — fish stocks, fuel, battery, inference tokens, crew attention
+===== REPO: ternary-constellation
+LANG: Rust
+DESC: Constellation pattern for grouping related ternary crates into deployable units
+===== REPO: ternary-constraint
+LANG: Rust
+DESC: Constraint satisfaction and propagation for ternary variables
+===== REPO: ternary-conv
+LANG: Rust
+DESC: Ternary convolution operations for {-1, 0, +1} signals and images
+===== REPO: ternary-counterpoint
+LANG: Rust
+DESC: ternary-counterpoint  Species counterpoint for ternary music
+===== REPO: ternary-crossfader
+LANG: Rust
+DESC: Crossfader dynamics — blending, cutting, and transforming ternary channels
+===== REPO: ternary-crystal
+LANG: Rust
+DESC: ternary-crystal  Crystallography and lattice symmetry in ternary space
+===== REPO: ternary-curriculum
+LANG: Rust
+DESC: Curriculum learning for ternary agents
+README-BEGIN
+# Ternary Curriculum
+
+Curriculum learning for ternary agents — **progressively harder environments** that train better strategies. Generates lesson sequences with configurable difficulty schedules (linear, exponential, adaptive), tracks mastery per lesson, and produces structured training reports.
+
+## Why It Matters
+
+Reinforcement learning agents trained on fixed difficulty often converge to local optima. **Curriculum learning** — introduced by Bengio et al. (2009) — starts with easy tasks and progressively increases difficulty, mimicking how humans and animals learn. The result: faster convergence, better final performance, and more robust generalization.
+
+For ternary agents (whose actions are {-1, 0, +1}), curriculum learning is especially impactful because the ternary action space is small enough that individual lessons have clear, measurable outcomes — pass/fail/inconclusive — enabling precise mastery tracking.
+
+The mathematical foundation: if $\pi_\theta(a|s)$ is the agent's policy and $D(\theta, d)$ is the expected return at difficulty $d$, then curriculum learning optimizes:
+
+$$\max_\theta \int_0^1 D(\theta, d) \cdot w(d) \, dd$$
+
+where $w(d)$ is the curriculum schedule — a weighting function over difficulty levels.
+
+## How It Works
+
+### Difficulty Schedules
+
+**Linear**:
+$$d(i) = d_{\text{start}} + (d_{\text{end}} - d_{\text{start}}) \cdot \frac{i}{S}$$
+
+**Exponential**:
+$$d(i) = d_{\text{start}} \cdot \left(\frac{d_{\text{end}}}{d_{\text{start}}}\right)^{i/S}$$
+
+**Adaptive**: Adjusts step size based on mastery rate $\rho$:
+
+$$\alpha_t = \begin{cases} 1.5 & \rho_t > 0.8 \;\text{(accelerate)} \\ 0.5 & \rho_t < 0.4 \;\text{(slow down)} \\ 1.0 & \text{otherwise} \end{cases}$$
+
+$$d_{t+1} = \text{clamp}(d_t + \Delta \cdot \alpha_t, \; d_{\text{start}}, \; d_{\text{end}})$$
+
+The adaptive schedule uses exponential moving average: $\alpha \leftarrow 0.7\alpha + 0.3\alpha_{\text{target}}$ for smooth transitions.
+
+### Mastery Tracking
+
+Each lesson has a success threshold $\theta$ and max attempts $M$. The tracker records:
+
+| Status | Condition |
+|--------|-----------|
+README-END
+===== REPO: ternary-database
+LANG: Rust
+DESC: Database operations for ternary data
+README-BEGIN
+# ternary-database
+
+Storage, indexing, querying, and transactions for rows with ternary-valued fields (−1, 0, +1).
+
+## Why This Exists
+
+If your data model is ternary — sentiment scores, approval states, sensor classifications — you shouldn't have to shoe-horn that into a binary database. This crate provides a purpose-built storage engine where ternary values are first-class. It includes hash and B-tree indexes optimized for three-valued keys, a builder-pattern query system with filter/sort/limit, aggregation (count and sum by ternary value), transactions with operation logging, and a SQL-like query parser. It's an in-process, in-memory database for ternary data.
+
+## Core Concepts
+
+- **Ternary** — The core value type: Neg (−1), Zero (0), Pos (+1). Stored as an enum, convertible to/from i8.
+- **FieldValue** — A row field can hold a Ternary, Integer, Text, TernaryArray, or Null. This lets you mix ternary classifications with conventional data.
+- **TernaryTable** — A named collection of rows, stored in a HashMap keyed by auto-incrementing u64 ID.
+- **TernaryHashIndex** — A HashMap from Ternary → Vec<row_id>. O(1) lookup for exact ternary matches.
+- **TernaryBTreeIndex** — A three-bucket structure (neg_ids, zero_ids, pos_ids) supporting range queries and sorted traversal. Not a true B-tree; it's a partitioned index exploiting the fixed three-value domain.
+- **TernaryQuery** — Builder pattern: `.filter(field, op).sort(field, dir).limit(n).execute()`. Filter operators: Eq, Ne, Gt, Lt, Gte, Lte — all comparing against ternary values.
+- **Transaction** — Tracks insert, delete, and update operations in a log. Supports commit (marks committed) and exposes the rollback log for manual undo. No automatic rollback — the log is a record for application-level recovery.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-database = "0.1"
+```
+
+```rust
+use ternary_database::*;
+
+fn main() {
+    // Create a table
+    let mut table = TernaryTable::new("sensors");
+
+    // Insert rows
+    let mut row = Row::new(0);
+    row.set("status", FieldValue::Ternary(Ternary::Pos));
+    row.set("label", FieldValue::Text("normal".into()));
+    let id1 = table.insert(row);
+
+    let mut row = Row::new(0);
+README-END
+===== REPO: ternary-depth
+LANG: Rust
+DESC: Depth measurement and pressure modeling for nested ternary systems
+===== REPO: ternary-dice
+LANG: Rust
+DESC: Stochastic exploration with configurable randomness for balanced ternary systems
+===== REPO: ternary-diehard
+LANG: Rust
+DESC: Game of Life variants on ternary grids (Dead/Idle/Alive)
+README-BEGIN
+# ternary-diehard
+
+> Three-state cellular automata: Conway's Game of Life extended with a quiescent "Idle" state.
+
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg)](https://www.rust-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## What problem does this solve?
+
+Conway's Game of Life is a binary automaton: cells are **Alive** or **Dead**. In real biological tissues, however, cells often enter a **quiescent** or **refractory** state—neither fully active nor apoptotic. Think of cell-cycle arrest, dormant stem-cell niches, or neurons in relative hyperpolarization. A ternary automaton with states `Dead (-1)`, `Idle (0)`, and `Alive (1)` lets us model these intermediate physiological conditions within a discrete spatial framework.
+
+Mathematically, this is a **totalistic cellular automaton** on a 2-D square lattice with Moore neighborhood (8 neighbors). The update function
+
+```
+s'(x, y) = f( s(x, y),  N_alive(x, y),  N_active(x, y) )
+```
+
+depends on the cell's current state and the counts of Alive and active (Alive+Idle) neighbors. This crate implements three well-known rule families—**ThreeStateLife**, **HighLifeTernary**, and **DayAndNightTernary**—adapted to include an Idle refractory state.
+
+---
+
+## The science
+
+### Trit encoding of cell fate
+
+| Trit | State | Biological analogue |
+|------|-------|---------------------|
+| `-1` | Dead  | Apoptotic / empty lattice site |
+| ` 0` | Idle  | Quiescent / refractory / G₀-arrested |
+| ` 1` | Alive | Mitotically active / firing |
+
+### ThreeStateLife rules
+
+A direct extension of Conway's Life:
+
+- **Birth**: Dead → Alive if exactly **3** Alive neighbors.
+- **Survival**: Alive persists if **2 or 3** Alive neighbors; dies otherwise.
+- **Refractory transition**: Alive → **Idle** if exactly **2** Alive neighbors (a graceful degradation rather than immediate death).
+README-END
+===== REPO: ternary-diff
+LANG: Rust
+DESC: ternary-diff  Diff and patch for ternary strategies: compare, merge, and resolve conflicts
+===== REPO: ternary-dispatch
+LANG: Rust
+DESC: Async dispatch of ternary-packed GPU kernels. Queue ordering, conservation verification, and throughput measurement.
+===== REPO: ternary-distill
+LANG: Rust
+DESC: Knowledge distillation for ternary networks. Teacher speaks in probabilities, student answers in trits. Soft targets, KL divergence, gradual ternarization.
+===== REPO: ternary-distributed
+LANG: Rust
+DESC: Distributed systems primitives for ternary protocols
+README-BEGIN
+# Ternary Distributed — Consensus, Gossip, and Synchronization over {−1, 0, +1}
+
+**Ternary Distributed** provides distributed systems primitives — node management, gossip propagation, vector clocks, partition detection, Paxos-like consensus, and anti-entropy synchronization — built natively on the ternary value space **T = {−1, 0, +1}**. Every node holds a ternary state, every protocol operates on trits, and every consensus decision is a ternary vote.
+
+## Why It Matters
+
+Standard distributed systems encode three-valued states (accept/reject/abstain, leader/follower/candidate, healthy/degraded/failed) into binary pairs or enums — an impedance mismatch that wastes bits and complicates wire protocols. Ternary distributed primitives eliminate this mismatch: three states are native, not emulated.
+
+Beyond convenience, ternary consensus offers **mathematical advantages**:
+
+- **Byzantine bounds:** In GF(3), the Byzantine agreement lower bound is tighter. With ternary votes, the number of loyal nodes needed is 3f + 1 (same as binary), but the information density per round is log₂(3) ≈ 1.585× higher.
+- **Quorum arithmetic:** Ternary quorum uses Σ(votes) ∈ {−q, ..., +q} rather than counting booleans. The sign and magnitude of the sum carry information about agreement strength, not just its direction.
+- **Convergence:** Gossip with the dominant-trit rule converges in O(log N) rounds for N nodes, matching the binary epidemic bound, but with three-way agreement semantics.
+
+## How It Works
+
+### Gossip Protocol (Epidemic Dissemination)
+
+Each round, every node examines its peers' states and adopts the **dominant non-zero trit**:
+
+```
+dominant(peer_states) = Pos    if count(Pos) ≥ count(Neg) and count(Pos) > 0
+                      = Neg    if count(Neg) > count(Pos)
+                      = None   if all peers are Zero
+```
+
+Ties are broken toward **Pos** (optimistic convergence). A node only adopts a peer's state if the peer's vector clock is ≥ its own, ensuring **causal consistency** — nodes never regress to stale information.
+
+**Convergence bound:** For a fully connected cluster of N nodes where initially one node holds state s ∈ {Pos, Neg}, the expected number of rounds to convergence is:
+
+```
+E[rounds] = O(log N) + O(log(1/ε))
+```
+
+where ε is the desired probability of full convergence. This matches the classical epidemic spreading bound.
+
+**Complexity:** O(N × d) per round, where d is the average node degree. Memory: O(N) for state storage.
+
+### Vector Clocks (Causal Ordering)
+
+README-END
+ALL_DONE
+===== REPO: ternary-dockyard
+{"desc":"Maintenance and repair of ternary agents","lang":"Rust"}
+README-BEGIN
+# ternary-dockyard: Maintenance and repair of ternary agents
+
+Dry dock, diagnostics, refitting, and salvage for agents operating in {-1, 0, +1} state spaces.
+
+## Why This Exists
+
+Ternary agents degrade over time — states stagnate, health drops, components fail. Without a maintenance system, you'd need to throw away agents and start fresh every time something goes wrong. This crate provides the infrastructure to take agents offline, diagnose what's wrong, plan repairs, and even salvage useful parts from dead agents. Think of it as a shipyard for your ternary fleet.
+
+## Core Concepts
+
+- **Ternary**: A value in {-1, 0, +1}. Negative, Zero, or Positive.
+- **Agent**: An entity with a ternary state vector, health score, and operational status.
+- **Dockyard**: The central facility managing active and docked agents.
+- **Dry Dock**: The process of taking an agent offline for repairs and returning it to service.
+- **RepairBill**: A diagnostic report listing issues found in an agent, with severity and priority.
+- **RefitPlan**: A plan to upgrade an agent's state vector (e.g., rebalancing an imbalanced agent).
+- **MaintenanceSchedule**: Preventive maintenance intervals — agents get serviced before they break.
+- **SalvageYard**: Recovers ternary components from decommissioned agents for reuse.
+
+## Quick Start
+
+```toml
+# Cargo.toml
+[dependencies]
+ternary-dockyard = "0.1"
+```
+
+```rust
+use ternary_dockyard::*;
+
+// Set up a dockyard
+let mut dock = Dockyard::new();
+
+// Register an agent with a ternary state vector
+let id = dock.register(vec![Ternary::Positive, Ternary::Positive, Ternary::Positive]);
+println!("Agent {} registered, active: {}", id, dock.active_count());
+
+// Take it offline for maintenance
+DryDock::dock(&mut dock, id, 100).unwrap();
+
+README-END
